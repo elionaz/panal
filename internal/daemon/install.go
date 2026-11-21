@@ -24,7 +24,8 @@ func (s *Server) profileInstall(p protocol.ProfileInstallParams) (protocol.Sessi
 		}
 	}
 	// The rescan never decides the outcome: the install's status does.
-	rescan := "{ " + shellQuote(s.cfg.Exe) + " profiles scan >/dev/null 2>&1 || true; }"
+	// It is a CLI command: the bundled CLI in an app install (cliExe).
+	rescan := "{ " + shellQuote(s.cliExe()) + " profiles scan >/dev/null 2>&1 || true; }"
 	info, err := s.spawnWith(protocol.SpawnParams{ProjectID: p.ProjectID, ProfileID: "shell", Cols: p.Cols, Rows: p.Rows},
 		spawnExtra{setup: "( " + cmd + " ) && " + rescan, setupTitle: "installing " + name})
 	if err != nil {
