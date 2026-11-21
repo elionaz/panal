@@ -6,13 +6,16 @@ import (
 	"time"
 
 	"github.com/elionaz/panal/internal/apierr"
+	"github.com/elionaz/panal/internal/forge"
 	"github.com/elionaz/panal/internal/protocol"
 )
 
 // forge.list: the pull requests of every branch a session's worktree
 // worked on (worktree.Record.Branches plus the one it is on), so a session
-// that opened several shows them all. One host call per branch (at most
-// forgeListParallel at a time); answers are cached forgeListTTL per
+// that opened several shows them all. A forge.Lister answers for all of
+// them in one go (GitHub: two listings); otherwise, or for the branches it
+// could not rule out, one host call per branch (at most forgeListParallel
+// at a time). Answers are cached forgeListTTL per
 // worktree and dropped when its branches or pull requests change.
 
 const (
@@ -98,9 +101,34 @@ func (s *Server) forgeList(p protocol.ForgeListParams) (protocol.ForgeList, erro
 		return out, err
 	}
 	items := make([]protocol.ForgeListItem, len(branches))
+	// One or two host calls for all the branches when the forge can; per
+	// branch only for those it could not rule out.
+	ask := branches
+	if l, ok := f.(forge.Lister); ok {
+		cctx, cancel := context.WithTimeout(ctx, forgeListCallTO)
+		prs, complete, err := l.Statuses(cctx, branches)
+		cancel()
+		if err == nil {
+			ask = nil
+			for i, b := range branches {
+				if pr := prs[b]; pr != nil {
+					items[i] = protocol.ForgeListItem{Branch: b, PR: pr, Current: b == t.current}
+				} else if !complete {
+					ask = append(ask, b)
+				}
+			}
+		} else {
+			s.log.Debug("forge.list", "statuses", err)
+		}
+	}
+	idx := make(map[string]int, len(branches))
+	for i, b := range branches {
+		idx[b] = i
+	}
 	sem := make(chan struct{}, forgeListParallel)
 	var wg sync.WaitGroup
-	for i, b := range branches {
+	for _, b := range ask {
+		i := idx[b]
 		wg.Go(func() {
 			sem <- struct{}{}
 			defer func() { <-sem }()

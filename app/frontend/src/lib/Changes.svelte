@@ -11,7 +11,7 @@
   import { api, errorMessage, type DiffFile, type DiffResult, type ForgeListItem, type LossInfo, type PRResult } from './api'
   import { hasKey, locale, t, th } from './i18n.svelte'
   import PullRequest from './PullRequest.svelte'
-  import { selectedBranch, showPRList } from './sessionprs'
+  import { groupPRs, selectedBranch, showPRList } from './sessionprs'
   import { shortBranch } from './branch'
   import { joinNames } from './shared'
 
@@ -64,6 +64,18 @@
   let prList = $state<ForgeListItem[] | null>(null)
   let prPicked = $state('') // a listed other branch shown in the PR block
   let prListOpen = $state(true)
+  /** The merged or closed ones, folded by default. */
+  let prDoneOpen = $state(false)
+  let prListLoading = $state(false)
+  const prGroups = $derived(groupPRs(prList))
+  const prSummary = $derived(
+    [
+      prGroups.open.length ? t('changes.prsOpen', { n: prGroups.open.length }) : '',
+      prGroups.done.length ? t('changes.prsDone', { n: prGroups.done.length }) : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  )
   let prListSeq = 0
   const prBranch = $derived(selectedBranch(prList, prPicked))
   let notice = $state<string | null>(null)
@@ -208,11 +220,14 @@
 
   async function loadPRList(refresh = false) {
     const my = ++prListSeq
+    prListLoading = true
     try {
       const l = await api.forgeList(sessionId ?? '', worktreeId ?? '', refresh)
       if (my === prListSeq) prList = l.prs ?? []
     } catch {
       if (my === prListSeq) prList = null // no list: the PR block alone, as before
+    } finally {
+      if (my === prListSeq) prListLoading = false
     }
   }
   // Reload when the target or its branch moves; the daemon caches a minute.
@@ -433,32 +448,48 @@
       {#if onMoveToWorktree}<button class="notice-action" onclick={onMoveToWorktree}>{t('changes.moveToWorktree')}</button>{/if}
     </div>
   {/if}
-  {#if diff?.branch && showPRList(prList)}
+  {#snippet prItem(it: ForgeListItem)}
+    <li>
+      <button
+        class="pritem"
+        class:sel={prBranch ? prBranch === it.branch : it.current}
+        title={it.branch}
+        onclick={() => (prPicked = it.current ? '' : it.branch)}
+      >
+        <span class="num">#{it.pr?.number}</span>
+        <span class="ptitle">{it.pr?.title}</span>
+        <span class="pstate st-{it.pr?.state}">{prState(it.pr?.state ?? '')}</span>
+        {#if it.pr?.checks?.state === 'passing'}<span class="ck ck-passing">✓</span>
+        {:else if it.pr?.checks?.state === 'failing'}<span class="ck ck-failing">✗</span>
+        {:else if it.pr?.checks?.state === 'pending'}<span class="ck ck-pending">●</span>{/if}
+        {#if it.current}<span class="cur">{t('changes.currentBranch')}</span>{/if}
+      </button>
+    </li>
+  {/snippet}
+  {#if diff?.branch && prList === null && prListLoading}
+    <div class="prlist"><p class="section loading">{t('changes.prsLoading')}</p></div>
+  {:else if diff?.branch && showPRList(prList)}
     <div class="prlist">
       <button class="section toggle" aria-expanded={prListOpen} onclick={() => (prListOpen = !prListOpen)}
-        ><span class="caret" class:open={prListOpen}>▸</span> {t('changes.sessionPRs', { n: prList?.length ?? 0 })}</button
+        ><span class="caret" class:open={prListOpen}>▸</span> {t('changes.sessionPRs', { n: prList?.length ?? 0 })}
+        <span class="prsum">{prSummary}</span></button
       >
       {#if prListOpen}
-        <ul>
-          {#each prList ?? [] as it (it.branch)}
-            <li>
-              <button
-                class="pritem"
-                class:sel={prBranch ? prBranch === it.branch : it.current}
-                title={it.branch}
-                onclick={() => (prPicked = it.current ? '' : it.branch)}
-              >
-                <span class="num">#{it.pr?.number}</span>
-                <span class="ptitle">{it.pr?.title}</span>
-                <span class="pstate st-{it.pr?.state}">{prState(it.pr?.state ?? '')}</span>
-                {#if it.pr?.checks?.state === 'passing'}<span class="ck ck-passing">✓</span>
-                {:else if it.pr?.checks?.state === 'failing'}<span class="ck ck-failing">✗</span>
-                {:else if it.pr?.checks?.state === 'pending'}<span class="ck ck-pending">●</span>{/if}
-                {#if it.current}<span class="cur">{t('changes.currentBranch')}</span>{/if}
-              </button>
-            </li>
-          {/each}
-        </ul>
+        {#if prGroups.open.length}
+          <ul>
+            {#each prGroups.open as it (it.branch)}{@render prItem(it)}{/each}
+          </ul>
+        {/if}
+        {#if prGroups.done.length}
+          <button class="section toggle sub" aria-expanded={prDoneOpen} onclick={() => (prDoneOpen = !prDoneOpen)}
+            ><span class="caret" class:open={prDoneOpen}>▸</span> {t('changes.prsDone', { n: prGroups.done.length })}</button
+          >
+          {#if prDoneOpen}
+            <ul>
+              {#each prGroups.done as it (it.branch)}{@render prItem(it)}{/each}
+            </ul>
+          {/if}
+        {/if}
       {/if}
     </div>
   {/if}
@@ -1033,6 +1064,22 @@
     flex: none;
     border-bottom: 1px solid var(--border);
     padding-bottom: 4px;
+  }
+  .prsum {
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 11.5px;
+    color: var(--fg-dim);
+  }
+  .section.sub {
+    padding-left: 22px;
+    padding-top: 4px;
+    font-size: 12px;
+  }
+  .section.loading {
+    margin: 0;
+    font-size: 12px;
   }
   .prlist ul {
     list-style: none;
