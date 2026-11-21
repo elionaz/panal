@@ -43,13 +43,16 @@
     /** Install a catalog agent (the app opens a terminal session for it). */
     onInstall?: (profileId: string) => void
     onClose: () => void
+    /** The tab it opens on (default: General, the first). */
+    initialTab?: Tab
   }
 
-  let { profiles, onProfiles, onSettings, onInstall, onClose, projects = [], projectId = null }: Props = $props()
+  type Tab = 'general' | 'appearance' | 'agents' | 'instructions' | 'notify' | 'git'
+
+  let { profiles, onProfiles, onSettings, onInstall, onClose, projects = [], projectId = null, initialTab = 'general' }: Props = $props()
   /** The agent whose install command is being confirmed. */
   let installAsk = $state<string | null>(null)
 
-  type Tab = 'general' | 'appearance' | 'agents' | 'instructions' | 'notify' | 'git'
   type Mode = 'edit' | 'new' | 'variant'
   interface Form {
     id: string
@@ -65,7 +68,9 @@
     enabled: boolean
   }
 
-  let tab = $state<Tab>('agents')
+  // initialTab is only the tab it opens on.
+  // svelte-ignore state_referenced_locally
+  let tab = $state<Tab>(initialTab)
   let editing = $state<{ mode: Mode; form: Form } | null>(null)
   let formError = $state<string | null>(null)
   let listError = $state<string | null>(null)
