@@ -94,6 +94,8 @@
   let restartingDaemon = $state(false)
   let loaded = $state(false)
   let settingsOpen = $state(false)
+  type SettingsTab = 'general' | 'agents'
+  let settingsTab = $state<SettingsTab>('general')
   /** The past-sessions view; historyStamp bumps on history.changed. */
   let historyOpen = $state(false)
   let historyStamp = $state(0)
@@ -696,7 +698,9 @@
     else selectedId = null
   }
 
-  function openSettings() {
+  /** Opens Settings on tab (General by default). */
+  function openSettings(tab: SettingsTab = 'general') {
+    settingsTab = tab
     settingsOpen = true
     closeSearch(false)
     // Keep keystrokes out of the (now covered) terminal.
@@ -743,6 +747,7 @@
     return (...args) => {
       if (settingsOpen) closeSettings()
       if (historyOpen) closeHistory()
+      convoProject = null // what fn opens takes the conversation's place
       return fn(...args)
     }
   }
@@ -1079,7 +1084,7 @@
       }),
       EventsOn('daemon:down', (msg: string) => (daemonDown = msg)),
       // App menu "Preferences…" (⌘,).
-      EventsOn('app:open-settings', openSettings),
+      EventsOn('app:open-settings', () => openSettings()),
       // A notification was clicked.
       EventsOn('app:focus-session', focusFromNotification),
       // A newer release was found (null: none any more).
@@ -1139,7 +1144,7 @@
     onReorderProjects={reorderProjects}
     onUpdateProject={updateProject}
     onReorderSessions={reorderSessions}
-    onOpenSettings={openSettings}
+    onOpenSettings={() => openSettings()}
     onOpenHistory={openHistory}
     {msgActivity}
     {defaultAutoMessages}
@@ -1324,7 +1329,7 @@
             <Welcome
               {profiles}
               onAddProject={addProject}
-              onOpenSettings={openSettings}
+              onOpenSettings={() => openSettings('agents')}
               onRescan={async () => {
                 const ps = await guard(api.rescanProfiles())
                 if (ps) profiles = ps
@@ -1344,7 +1349,7 @@
                 {/each}
               </div>
             {/if}
-            <button class="linkish" onclick={openSettings}>{t('empty.chooseAgents')} <kbd>{keyLabel('⌘,')}</kbd></button>
+            <button class="linkish" onclick={() => openSettings('agents')}>{t('empty.chooseAgents')} <kbd>{keyLabel('⌘,')}</kbd></button>
           {/if}
         </div>
       {/if}
@@ -1413,6 +1418,7 @@
 
     {#if settingsOpen}
       <Settings
+        initialTab={settingsTab}
         {profiles}
         {projects}
         projectId={currentProjectId}
