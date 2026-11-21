@@ -7,6 +7,14 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The MCP servers work in the app.** With panal.app running the daemon, agent sessions got
+  `panal` and `panal-browser` MCP servers that closed right away ("Connection closed"): they ran
+  the app's own executable, which only runs the daemon and hooks. They now run the CLI bundled in
+  the app (`Contents/Helpers/panal`). The same applied to the profile rescan after installing an
+  agent from Settings.
+
 ## [0.15.0] - 2026-11-20
 
 ### Added

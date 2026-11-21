@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 
+	"github.com/elionaz/panal/internal/client"
 	"github.com/elionaz/panal/internal/hooks"
 	"github.com/elionaz/panal/internal/settings"
 )
@@ -21,9 +22,17 @@ func (s *Server) mcpOn() bool {
 	return st.MCP.Enabled
 }
 
+// cliExe runs the MCP servers' CLI commands: the daemon's own
+// executable, or, when that is panal.app's (an app install), the CLI
+// bundled next to it, since the app's executable only runs the daemon and
+// hooks (see client.CLIExecutable).
+func (s *Server) cliExe() string {
+	return client.CLIExecutable(s.cfg.Exe)
+}
+
 // panalMCP is `panal mcp` bound to this daemon.
 func (s *Server) panalMCP() hooks.MCPServer {
-	return hooks.MCPServer{Command: s.cfg.Exe, Args: []string{"mcp", "--sock", s.sock}}
+	return hooks.MCPServer{Command: s.cliExe(), Args: []string{"mcp", "--sock", s.sock}}
 }
 
 // hookMCP are the MCP servers an agent's hook integration carries (see
@@ -51,7 +60,7 @@ func (s *Server) agentMCPArgs(agent string) []string {
 		servers[mcpPanal] = s.panalMCP()
 	}
 	if s.browserReady() {
-		servers[mcpBrowser] = hooks.MCPServer{Command: s.cfg.Exe, Args: []string{"browser", "mcp", "--sock", s.sock}}
+		servers[mcpBrowser] = hooks.MCPServer{Command: s.cliExe(), Args: []string{"browser", "mcp", "--sock", s.sock}}
 	}
 	if len(servers) == 0 {
 		return nil
