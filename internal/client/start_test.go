@@ -107,3 +107,40 @@ func TestStartupError(t *testing.T) {
 		t.Errorf("stale reason: %q", got)
 	}
 }
+
+func TestCLIExecutable(t *testing.T) {
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mk := func(p string, mode os.FileMode) string {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("#!/bin/sh\n"), mode); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	app := mk(filepath.Join(dir, "panal.app/Contents/MacOS/panal"), 0o755)
+	// No bundled CLI: the app's executable stays.
+	if got := CLIExecutable(app); got != app {
+		t.Fatalf("without Helpers = %q", got)
+	}
+	cli := mk(filepath.Join(dir, "panal.app/Contents/Helpers/panal"), 0o755)
+	if got := CLIExecutable(app); got != cli {
+		t.Fatalf("app exe = %q, want %q", got, cli)
+	}
+	// The CLI itself, and binaries outside a bundle, stay as they are.
+	for _, exe := range []string{cli, mk(filepath.Join(dir, "bin/panal"), 0o755)} {
+		if got := CLIExecutable(exe); got != exe {
+			t.Fatalf("CLIExecutable(%q) = %q", exe, got)
+		}
+	}
+	// A bundled CLI that cannot run is not used.
+	os.Chmod(cli, 0o644)
+	if got := CLIExecutable(app); got != app {
+		t.Fatalf("non-executable Helpers = %q", got)
+	}
+}

@@ -36,6 +36,30 @@ func DaemonExecutable(exe string) string {
 	return app
 }
 
+// CLIExecutable is the binary to run CLI commands (`mcp`, `browser mcp`)
+// for the panal executable exe. The app's own executable
+// (X.app/Contents/MacOS/panal), which runs the daemon of an app install,
+// only knows `daemon`, `notify` and `version`: anything else starts the
+// app, which hands over to the open window and exits. So for it, this is
+// the CLI bundled next to it (X.app/Contents/Helpers/panal) when that
+// exists and is executable. Any other exe is returned unchanged.
+func CLIExecutable(exe string) string {
+	real, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		return exe
+	}
+	const marker = ".app/Contents/MacOS/"
+	i := strings.LastIndex(real, marker)
+	if i < 0 || strings.Contains(real[i+len(marker):], "/") || i+len(marker) == len(real) {
+		return exe
+	}
+	cli := real[:i+len(".app")] + "/Contents/Helpers/panal"
+	if fi, err := os.Stat(cli); err != nil || !fi.Mode().IsRegular() || fi.Mode().Perm()&0o111 == 0 {
+		return exe
+	}
+	return cli
+}
+
 // appExeForHelper maps "/A/X.app/Contents/Helpers/panal" to
 // "/A/X.app/Contents/MacOS/panal"; "" when path is not a bundle helper.
 func appExeForHelper(path string) string {
