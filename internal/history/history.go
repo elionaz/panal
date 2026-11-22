@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/elionaz/panal/internal/atomicfile"
+	"github.com/elionaz/panal/internal/fileformat"
 	"github.com/elionaz/panal/internal/redact"
 )
 
@@ -45,8 +46,15 @@ type Resume struct {
 	SessionID string `json:"sessionId"`
 }
 
+// EntryFormat is the newest format of <id>.json this build reads (see
+// internal/fileformat). Entries written before it was versioned have no
+// version: they are format 1.
+const EntryFormat = 1
+
 // Entry describes one ended session.
 type Entry struct {
+	// Version is the entry's format (EntryFormat when saved).
+	Version     int    `json:"version"`
 	ID          string `json:"id"`
 	ProjectID   string `json:"projectId"`
 	ProjectName string `json:"projectName"`
@@ -115,6 +123,7 @@ func (s *Store) Save(e Entry, lines []string, keep int) error {
 		ps = append(ps, redact.String(truncRunes(p, MaxPromptRunes)))
 	}
 	e.Prompts = ps
+	e.Version = EntryFormat
 	data, err := json.MarshalIndent(e, "", "  ")
 	if err != nil {
 		return err
@@ -160,7 +169,8 @@ func (s *Store) listLocked() []Entry {
 			continue
 		}
 		var e Entry
-		if json.Unmarshal(data, &e) != nil || e.ID != id {
+		// A newer panal's entry is left out (and so never pruned).
+		if json.Unmarshal(data, &e) != nil || e.ID != id || fileformat.Check(s.jsonPath(id), e.Version, EntryFormat) != nil {
 			continue
 		}
 		out = append(out, e)
@@ -188,6 +198,9 @@ func (s *Store) Get(id string) (Entry, string, error) {
 	}
 	var e Entry
 	if err := json.Unmarshal(data, &e); err != nil {
+		return Entry{}, "", err
+	}
+	if err := fileformat.Check(s.jsonPath(id), e.Version, EntryFormat); err != nil {
 		return Entry{}, "", err
 	}
 	text, err := os.ReadFile(s.textPath(id))

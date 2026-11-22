@@ -1,11 +1,19 @@
 # Changelog
 
-All notable changes to agenterm are documented in this file. The format is based on
+All notable changes to panal are documented in this file. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is 0.x, minor
 releases may include breaking changes.
 
 ## [Unreleased]
+
+### Changed
+
+- **What 1.0 will keep stable is written down.** [docs/compatibility.md](docs/compatibility.md) now
+  also covers a repository's `.panal.yaml`, the instruction topic files, `PANAL_PORT` and
+  `PANAL_BROWSER_URL`, the MCP tools (names, arguments and structured fields) and the agenterm
+  compatibility (kept for all of 1.x). Past-session entries now say their format version, like the
+  other files: a newer panal's entry is left alone instead of being misread or pruned.
 
 ### Fixed
 
