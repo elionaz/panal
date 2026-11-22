@@ -108,6 +108,15 @@ type CreateParams struct {
 }
 
 // Forge is a code host reached through its CLI.
+// Lister is a Forge that finds the pull requests of many branches at
+// once (one or two host calls instead of one per branch). Statuses maps
+// each branch that has one to its pull request, chosen as Status does;
+// complete reports that the host's whole history was searched, so a
+// branch left out has none (else the caller asks Status for those).
+type Lister interface {
+	Statuses(ctx context.Context, branches []string) (prs map[string]*PR, complete bool, err error)
+}
+
 type Forge interface {
 	Kind() string
 	Tool() string

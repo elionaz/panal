@@ -1,12 +1,14 @@
 package forge
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -110,6 +112,65 @@ func (g *github) Status(ctx context.Context, branch string) (*PR, error) {
 		}
 	}
 	return pickPR(own, func(p ghPR) bool { return p.State == "OPEN" }, func(p ghPR) *PR { return p.toPR() }), nil
+}
+
+// Limits of Statuses' two listings.
+const (
+	ghOpenLimit = 100
+	ghAllLimit  = 300
+	// ghLightFields: enough to name and link a pull request that is not
+	// open (no checks, review or merge state, which cost the most).
+	ghLightFields = "number,title,state,isDraft,url,baseRefName,headRefName,isCrossRepository"
+)
+
+// Statuses lists the repository's open pull requests (with checks) and
+// its recent ones of any state, both newest first, and picks for each of
+// branches what Status would: its newest open one, else its newest.
+func (g *github) Statuses(ctx context.Context, branches []string) (map[string]*PR, bool, error) {
+	want := make(map[string]bool, len(branches))
+	for _, b := range branches {
+		want[b] = true
+	}
+	var open, all []ghPR
+	var errOpen, errAll error
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		open, errOpen = g.list(ctx, "open", ghOpenLimit, ghPRFields)
+	})
+	wg.Go(func() {
+		all, errAll = g.list(ctx, "all", ghAllLimit, ghLightFields)
+	})
+	wg.Wait()
+	if err := cmp.Or(errOpen, errAll); err != nil {
+		return nil, false, err
+	}
+	byBranch := map[string][]ghPR{}
+	for _, list := range [][]ghPR{open, all} {
+		for _, p := range list {
+			if want[p.HeadRefName] && !p.IsCrossRepository {
+				byBranch[p.HeadRefName] = append(byBranch[p.HeadRefName], p)
+			}
+		}
+	}
+	out := make(map[string]*PR, len(byBranch))
+	for b, prs := range byBranch {
+		// The open listing comes first, with its checks.
+		out[b] = pickPR(prs, func(p ghPR) bool { return p.State == "OPEN" }, func(p ghPR) *PR { return p.toPR() })
+	}
+	// A full open listing could hide an older open one: not complete then.
+	return out, len(all) < ghAllLimit && len(open) < ghOpenLimit, nil
+}
+
+func (g *github) list(ctx context.Context, state string, limit int, fields string) ([]ghPR, error) {
+	out, err := g.run(ctx, "pr", "list", "-R", g.repo(), "--state", state, "--limit", strconv.Itoa(limit), "--json", fields)
+	if err != nil {
+		return nil, err
+	}
+	var prs []ghPR
+	if err := json.Unmarshal(out, &prs); err != nil {
+		return nil, fmt.Errorf("gh pr list: %w", err)
+	}
+	return prs, nil
 }
 
 // pickPR is the first open one, else the first (lists come newest first).

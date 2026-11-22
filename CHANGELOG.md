@@ -27,6 +27,11 @@ releases may include breaking changes.
   overview or a worktree in the sidebar now closes the project's conversation (before, only its ×
   did). **Settings opens on General**, its first tab; "Choose agents…" still opens on Agents.
 
+- **A session's pull requests show up in a second, the open ones first.** Changes asked the host
+  once per branch the session worked on (about 10 s for a long-running session, and until then only
+  the current branch's PR showed). It now lists them in one go (on GitHub, two calls) and says so
+  while it looks. The open ones come first, with a count; the merged or closed ones fold below.
+
 ## [0.15.0] - 2026-11-20
 
 ### Added

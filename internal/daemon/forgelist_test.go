@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,14 +13,23 @@ import (
 )
 
 // fakeGHPerBranch answers `pr list --head B` with a PR for the branches
-// fix/a (merged, #21) and feat/b (open, #22), and none for others.
-func fakeGHPerBranch(t *testing.T) {
+// fix/a (merged, #21) and feat/b (open, #22), and none for others; the
+// repository listings (`--state open|all` without --head) have them too.
+// Every call is appended to the returned log file.
+func fakeGHPerBranch(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
+	log := filepath.Join(dir, "calls.log")
+	a := `{"number":21,"title":"Fix a","state":"MERGED","url":"https://github.com/acme/app/pull/21","baseRefName":"main","headRefName":"fix/a","statusCheckRollup":[]}`
+	b := `{"number":22,"title":"Feat b","state":"OPEN","url":"https://github.com/acme/app/pull/22","baseRefName":"main","headRefName":"feat/b","statusCheckRollup":[]}`
 	script := `#!/bin/sh
+printf '%s\n' "$*" >> '` + log + `'
 case "$*" in
-  *"--head fix/a "*) echo '[{"number":21,"title":"Fix a","state":"MERGED","url":"https://github.com/acme/app/pull/21","baseRefName":"main","headRefName":"fix/a","statusCheckRollup":[]}]' ;;
-  *"--head feat/b "*) echo '[{"number":22,"title":"Feat b","state":"OPEN","url":"https://github.com/acme/app/pull/22","baseRefName":"main","headRefName":"feat/b","statusCheckRollup":[]}]' ;;
+  *"--head fix/a "*) echo '[` + a + `]' ;;
+  *"--head feat/b "*) echo '[` + b + `]' ;;
+  *"--head "*) echo '[]' ;;
+  "pr list"*"--state open"*) echo '[` + b + `]' ;;
+  "pr list"*"--state all"*) echo '[` + b + `,` + a + `]' ;;
   "pr list"*) echo '[]' ;;
   "repo view"*) echo '{"squashMergeAllowed":true}' ;;
   *) echo "fake gh: $*" >&2; exit 2 ;;
@@ -30,13 +40,14 @@ esac
 	}
 	testExtraPath.Store(dir)
 	t.Cleanup(func() { testExtraPath.Store("") })
+	return log
 }
 
 // A session that switches branches in its worktree: Changes follows the
 // branch it is on, the worktree remembers the others, and forge.list
 // shows the pull request of each.
 func TestSessionPullRequestsAcrossBranches(t *testing.T) {
-	fakeGHPerBranch(t)
+	calls := fakeGHPerBranch(t)
 	c, _, stop := startDaemon(t)
 	defer stop()
 	ctx := ctxT(t)
@@ -95,10 +106,16 @@ func TestSessionPullRequestsAcrossBranches(t *testing.T) {
 		t.Fatalf("create for another branch: %v", err)
 	}
 
-	// The list: newest branch first, branches without a PR left out.
+	// The list: newest branch first, branches without a PR left out, from
+	// two repository listings, not one call per branch.
+	before, _ := os.ReadFile(calls)
 	l, err := c.ForgeList(ctx, protocol.ForgeListParams{ForgeRef: ref, Refresh: true})
 	if err != nil {
 		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(calls)
+	if made := strings.Split(strings.TrimSpace(string(after[len(before):])), "\n"); len(made) != 2 || strings.Contains(string(after[len(before):]), "--head") {
+		t.Fatalf("forge.list calls = %q", made)
 	}
 	var got []int
 	for _, it := range l.PRs {

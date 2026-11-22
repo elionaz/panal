@@ -2,6 +2,7 @@ package forge
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -275,5 +276,61 @@ func TestGitLab(t *testing.T) {
 		if !strings.Contains(calls, want) {
 			t.Errorf("missing call %q in:\n%s", want, calls)
 		}
+	}
+}
+
+// Statuses answers for many branches with two listings: the open ones
+// (with checks) and the recent ones of any state.
+func TestGitHubStatuses(t *testing.T) {
+	open := `[{"number":12,"title":"Add x","state":"OPEN","url":"u12","baseRefName":"main","headRefName":"feat/x",
+  "statusCheckRollup":[{"__typename":"CheckRun","name":"go","status":"COMPLETED","conclusion":"SUCCESS"}]},
+ {"number":13,"title":"fork","state":"OPEN","url":"u13","baseRefName":"main","headRefName":"feat/y","isCrossRepository":true}]`
+	all := `[{"number":12,"title":"Add x","state":"OPEN","url":"u12","baseRefName":"main","headRefName":"feat/x"},
+ {"number":9,"title":"Y","state":"MERGED","url":"u9","baseRefName":"main","headRefName":"feat/y"},
+ {"number":7,"title":"old x","state":"MERGED","url":"u7","baseRefName":"main","headRefName":"feat/x"},
+ {"number":5,"title":"other","state":"CLOSED","url":"u5","baseRefName":"main","headRefName":"feat/other"}]`
+	f := newFake(t, "gh", [][2]string{{"--state open", open}, {"--state all", all}})
+	fg, _ := For("https://github.com/acme/app", t.TempDir(), f.path)
+	l, ok := fg.(Lister)
+	if !ok {
+		t.Fatal("github is a Lister")
+	}
+	prs, complete, err := l.Statuses(ctxT(t), []string{"feat/x", "feat/y", "feat/none"})
+	if err != nil || !complete {
+		t.Fatalf("statuses: %v, complete %v", err, complete)
+	}
+	// feat/x: its open one, with checks; feat/y: the fork's open one is
+	// not ours, its merged one is; feat/none: nothing; feat/other: not asked.
+	if x := prs["feat/x"]; x == nil || x.Number != 12 || x.State != StateOpen || x.Checks.State != ChecksPassing {
+		t.Fatalf("feat/x = %+v", x)
+	}
+	if y := prs["feat/y"]; y == nil || y.Number != 9 || y.State != StateMerged {
+		t.Fatalf("feat/y = %+v", y)
+	}
+	if len(prs) != 2 {
+		t.Fatalf("prs = %v", prs)
+	}
+	if calls := f.calls(); len(calls) != 2 {
+		t.Fatalf("calls = %q", calls)
+	}
+}
+
+// A listing that fills its limit may leave older pull requests out: not
+// complete, so the caller asks per branch for the ones it lacks.
+func TestGitHubStatusesIncomplete(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("[")
+	for i := range ghAllLimit {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, `{"number":%d,"title":"t","state":"MERGED","url":"u","baseRefName":"main","headRefName":"b%d"}`, i+1, i)
+	}
+	b.WriteString("]")
+	f := newFake(t, "gh", [][2]string{{"--state open", "[]"}, {"--state all", b.String()}})
+	fg, _ := For("https://github.com/acme/app", t.TempDir(), f.path)
+	prs, complete, err := fg.(Lister).Statuses(ctxT(t), []string{"b0", "old"})
+	if err != nil || complete || prs["b0"] == nil || prs["old"] != nil {
+		t.Fatalf("prs %v complete %v err %v", prs, complete, err)
 	}
 }
