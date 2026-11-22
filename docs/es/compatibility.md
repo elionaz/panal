@@ -9,9 +9,11 @@ Desde la 1.0, las superficies de abajo solo cambian de forma compatible dentro d
 | Superficie | Qué se promete |
 | --- | --- |
 | **CLI** | Los comandos y flags de [cli.md](cli.md) mantienen su nombre y su significado. Pueden aparecer comandos y flags nuevos. La salida pensada para personas (`ls`, `profiles`, `worktrees`…) puede cambiar: no la parsees. Un código de salida distinto de cero siempre es un fallo. |
-| **Variables de entorno** | `PANAL_HOME`, `PANAL_NOTIFY`, `PANAL_SESSION` y `PANAL_SOCK`, como se documentan en [cli.md](cli.md#variables-de-entorno). |
-| **Archivos de configuración** | `profiles.yaml` y `settings.yaml` (ver [configuration.md](configuration.md)): las claves mantienen su significado y las nuevas son opcionales y tienen un valor por defecto. Cada archivo dice su versión de formato (abajo). |
+| **Variables de entorno** | `PANAL_HOME`, `PANAL_NOTIFY`, `PANAL_SESSION` y `PANAL_SOCK`, como se documentan en [cli.md](cli.md#variables-de-entorno), y las que recibe cada sesión: `PANAL_PORT` ([worktrees.md](worktrees.md)) y `PANAL_BROWSER_URL` ([configuration.md](configuration.md#navegador-para-los-agentes)). |
+| **Archivos de configuración** | `profiles.yaml`, `settings.yaml`, el `.panal.yaml` de un repositorio y los archivos de temas de instrucciones (su front matter), ver [configuration.md](configuration.md) y [worktrees.md](worktrees.md): las claves mantienen su significado y las nuevas son opcionales y tienen un valor por defecto. Cada archivo dice su versión de formato (abajo). |
 | **Hooks** | El comando que panal instala en los hooks de un agente (`<panal> notify --sock … --from-hook …`, ver [attention-and-activity.md](attention-and-activity.md)) sigue funcionando, así que los hooks que instaló una versión anterior no hay que reinstalarlos. |
+| **Herramientas MCP** | Las herramientas del servidor MCP de panal (`panal mcp`, ver [mcp.md](mcp.md)) mantienen su nombre y sus argumentos, y los campos de sus resultados estructurados mantienen su significado. Pueden aparecer herramientas, argumentos y campos nuevos. El texto que devuelven es para el modelo y puede cambiar. |
+| **El nombre viejo** | Lo que hace que una instalación de agenterm siga funcionando (mover `~/.agenterm` y `~/.config/agenterm`, las variables `AGENTERM_*`, un comando o enlace `agenterm`, `.agenterm.yaml`) se mantiene en toda la 1.x. |
 | **Protocolo del daemon** | Versionado (abajo). Es como se hablan la app, la CLI y el daemon; no es una API pública, pero versiones de panal que no se entienden lo detectan y dicen qué hacer. |
 
 Fuera de esto: `daemon.log` (su contenido cambia libremente), los archivos de ejecución
@@ -30,6 +32,9 @@ Cada archivo que escribe panal dice qué formato usa:
 | `worktrees.json` | `~/.panal/` | `{"version": 1, "worktrees": [...]}` | 1 |
 | `sessions.json` | `~/.panal/` | `{"version": 1, "sessions": [...]}` | 1 |
 | `messages.json` | `~/.panal/` | `{"version": 1, "messages": [...]}` (desde 0.6.0) | 1 |
+| `trust.json` | `~/.config/panal/` | `{"version": 1, "trusted": [...]}` | 1 |
+| `.panal.yaml` | la raíz de un repositorio | clave `version:` de primer nivel | 1 |
+| `history/<id>.json` | `~/.panal/` | un campo `"version"` en cada entrada (las que se guardaron antes de versionarlas no lo tienen: formato 1) | 1 |
 
 - **Los archivos de antes de la 0.4.0** no tienen versión: son formato 1 y se leen tal cual
   (`profiles.yaml` como una lista, los JSON como arrays). panal añade la versión la próxima vez
