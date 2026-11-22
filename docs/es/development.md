@@ -98,10 +98,12 @@ builds sin ldflags dicen `dev`.
 2. Etiqueta `main` y sube el tag:
 
    ```sh
-   git switch main && git pull
-   git tag -a v0.1.0 -m "panal 0.1.0"
-   git push origin v0.1.0
+   scripts/tag-release.sh 0.1.0      # -n: solo revisa
    ```
+
+   Etiqueta `origin/main` (no tu checkout) cuando su CHANGELOG tiene la sección `## [0.1.0]` y el
+   CI pasó en ese commit (espera mientras corre), y sube `v0.1.0`. A mano es
+   `git tag -a v0.1.0 -m "panal 0.1.0" origin/main && git push origin v0.1.0`.
 
 3. `.github/workflows/release.yml` corre con el tag (runner de macOS) y:
    - compila todo con `scripts/release-local.sh <versión>` (el mismo script que corres en local): la

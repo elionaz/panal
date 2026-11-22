@@ -97,10 +97,12 @@ report `dev`.
 2. Tag `main` and push the tag:
 
    ```sh
-   git switch main && git pull
-   git tag -a v0.1.0 -m "panal 0.1.0"
-   git push origin v0.1.0
+   scripts/tag-release.sh 0.1.0      # -n: check only
    ```
+
+   It tags `origin/main` (not your checkout) once its CHANGELOG has the `## [0.1.0]` section and
+   CI passed on that commit (it waits while CI runs), then pushes `v0.1.0`. By hand, that is
+   `git tag -a v0.1.0 -m "panal 0.1.0" origin/main && git push origin v0.1.0`.
 
 3. `.github/workflows/release.yml` runs on the tag (macOS runner) and:
    - builds everything with `scripts/release-local.sh <version>` (the same script you run locally):
