@@ -23,6 +23,10 @@ releases may include breaking changes.
   the app (`Contents/Helpers/panal`). The same applied to the profile rescan after installing an
   agent from Settings.
 
+- **The conversation closes when you pick something else.** Clicking a session, a project, the
+  overview or a worktree in the sidebar now closes the project's conversation (before, only its ×
+  did). **Settings opens on General**, its first tab; "Choose agents…" still opens on Agents.
+
 ## [0.15.0] - 2026-11-20
 
 ### Added
