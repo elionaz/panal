@@ -291,6 +291,7 @@ export namespace history {
 	    }
 	}
 	export class Entry {
+	    version: number;
 	    id: string;
 	    projectId: string;
 	    projectName: string;
@@ -318,6 +319,7 @@ export namespace history {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
 	        this.id = source["id"];
 	        this.projectId = source["projectId"];
 	        this.projectName = source["projectName"];
