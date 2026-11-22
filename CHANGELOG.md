@@ -1,13 +1,31 @@
 # Changelog
 
-All notable changes to agenterm are documented in this file. The format is based on
+All notable changes to panal are documented in this file. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is 0.x, minor
 releases may include breaking changes.
 
 ## [Unreleased]
 
+### Changed
+
+- **What 1.0 will keep stable is written down.** [docs/compatibility.md](docs/compatibility.md) now
+  also covers a repository's `.panal.yaml`, the instruction topic files, `PANAL_PORT` and
+  `PANAL_BROWSER_URL`, the MCP tools (names, arguments and structured fields) and the agenterm
+  compatibility (kept for all of 1.x). Past-session entries now say their format version, like the
+  other files: a newer panal's entry is left alone instead of being misread or pruned.
+
 ### Fixed
+
+- **The MCP servers work in the app.** With panal.app running the daemon, agent sessions got
+  `panal` and `panal-browser` MCP servers that closed right away ("Connection closed"): they ran
+  the app's own executable, which only runs the daemon and hooks. They now run the CLI bundled in
+  the app (`Contents/Helpers/panal`). The same applied to the profile rescan after installing an
+  agent from Settings.
+
+- **The conversation closes when you pick something else.** Clicking a session, a project, the
+  overview or a worktree in the sidebar now closes the project's conversation (before, only its ×
+  did). **Settings opens on General**, its first tab; "Choose agents…" still opens on Agents.
 
 - **A session's pull requests show up in a second, the open ones first.** Changes asked the host
   once per branch the session worked on (about 10 s for a long-running session, and until then only

@@ -2,9 +2,12 @@ package history
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elionaz/panal/internal/fileformat"
 )
 
 func entry(id, project string, ended time.Time) Entry {
@@ -132,5 +135,38 @@ func TestSnippetCut(t *testing.T) {
 	}
 	if m := sn.Matches[0]; sn.Line[m[0]:m[1]] != "needle" {
 		t.Fatalf("range %v", m)
+	}
+}
+
+// Entries say their format. An unversioned one (before it was versioned)
+// is read as format 1; a newer panal's entry is left out of the list (so
+// it is never pruned) and refused by Get, and the file is left alone.
+func TestEntryFormat(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	if err := s.Save(Entry{ID: "aa11", EndedAt: time.Now()}, []string{"x"}, 0); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "aa11.json"))
+	if !strings.Contains(string(data), `"version": 1`) {
+		t.Fatalf("saved entry: %s", data)
+	}
+	os.WriteFile(filepath.Join(dir, "bb22.json"), []byte(`{"id":"bb22","endedAt":"2026-01-01T00:00:00Z"}`), 0o600)
+	newer := []byte(`{"version":2,"id":"cc33","endedAt":"2027-01-01T00:00:00Z"}`)
+	os.WriteFile(filepath.Join(dir, "cc33.json"), newer, 0o600)
+
+	var ids []string
+	for _, e := range s.List() {
+		ids = append(ids, e.ID)
+	}
+	if strings.Join(ids, ",") != "aa11,bb22" {
+		t.Fatalf("list = %v", ids)
+	}
+	if _, _, err := s.Get("cc33"); !fileformat.IsTooNew(err) {
+		t.Fatalf("get newer: %v", err)
+	}
+	s.Save(Entry{ID: "dd44", EndedAt: time.Now()}, []string{"y"}, 1) // prunes down to 1
+	if got, _ := os.ReadFile(filepath.Join(dir, "cc33.json")); string(got) != string(newer) {
+		t.Fatalf("newer entry touched: %q", got)
 	}
 }
