@@ -229,6 +229,17 @@ con `vite --port $PANAL_PORT` (en tu script `dev`), o lee `process.env.VITE_PORT
   **Abrir en Finder** (`panal worktree open [--finder] <id>`).
 - **Copiar rama** (solo en la app, al portapapeles).
 
+## Notas para el agente
+
+En **Cambios** de una sesión de agente viva, haz click en un número de línea del diff para dejarle una
+nota en esa línea al agente de la sesión (shift-click en otra línea del mismo archivo para un rango;
+funciona en las dos vistas, y las líneas eliminadas se nombran como líneas de la versión anterior).
+Las notas se juntan arriba de la lista de archivos, marcadas en el diff; **Enviar a &lt;sesión&gt;** las
+manda todas en un solo mensaje tuyo, con el lugar de cada una (`archivo:línea`) y el código citado, y
+el agente lo lee como cualquier otro [mensaje](messages.md). Las notas sin enviar se quedan mientras la
+app corre, por sesión; al cerrar la app se pierden. Las shells y las sesiones terminadas no reciben
+notas.
+
 ## Pull requests en GitHub y GitLab
 
 La pestaña **Cambios** muestra el pull request de la rama, en sesiones con worktree y en sesiones
@@ -251,6 +262,10 @@ ofrece crear un pull request para la rama en la que está el worktree.
   nombres, en curso; en GitLab, el pipeline) y la decisión de review. El título enlaza al servidor.
 - **Comentarios**: comentarios de la conversación, reviews con texto (aprobado, cambios pedidos) y
   comentarios de línea con `archivo:línea`, que seleccionan ese archivo en el diff.
+- **Enviar al agente** (sesiones de agente vivas): *Pedirle a &lt;sesión&gt; que los arregle*, junto a los
+  checks que fallan, manda un mensaje con sus nombres y cómo verlos (`gh pr checks`,
+  `glab ci status`); en los comentarios, *Enviar a &lt;sesión&gt;* en uno o *Enviar todos a &lt;sesión&gt;* los
+  manda con su autor, `archivo:línea` y enlace, pidiéndole al agente que los atienda y haga push.
 - **Merge en el servidor**: con los métodos que permite el repositorio (squash, commit de merge,
   rebase) y *borrar la rama en el servidor después*. Avisa de borradores, conflictos, checks que
   fallan o siguen en curso y merges que el servidor podría rechazar; la última palabra es del

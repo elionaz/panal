@@ -226,6 +226,16 @@ set, so nothing changes for servers that expect their usual port.
   **Open in Finder** (`panal worktree open [--finder] <id>`).
 - **Copy branch** (app only, to the clipboard).
 
+## Notes for the agent
+
+In a live agent session's **Changes**, click a line number of the diff to leave a note on that line
+for the session's agent (shift-click another line of the same file for a range; both views work,
+and removed lines are named as lines of the old version). The notes gather above the file list,
+marked in the diff; **Send to &lt;session&gt;** sends them all as one message from you, with each line's
+place (`file:line`) and code quoted, and the agent reads it like any other
+[message](messages.md). Notes not sent yet stay while the app runs, per session; quitting the app
+drops them. Shells and exited sessions don't take notes.
+
 ## Pull requests on GitHub and GitLab
 
 The **Changes** tab shows the pull request of the branch, for worktree sessions and for sessions in
@@ -247,6 +257,10 @@ only offered for the branch the worktree is on.
   running; GitLab: the pipeline) and the review decision. The title links to the host.
 - **Comments**: conversation comments, reviews with text (approved, changes requested) and line
   comments with `file:line`, which select that file in the diff.
+- **Send to the agent** (live agent sessions): *Ask &lt;session&gt; to fix them* next to failing checks
+  sends a message naming them and how to look at them (`gh pr checks`, `glab ci status`); in the
+  comments, *Send to &lt;session&gt;* on one comment or *Send all to &lt;session&gt;* sends them with their
+  author, `file:line` and link, asking the agent to address them and push.
 - **Merge on the host**: with the methods the repository allows (squash, merge commit, rebase) and
   *delete the branch on the host afterwards*. Warnings for drafts, conflicts, failing or running
   checks and merges the host may refuse; the host has the last word. Local folders and branches are

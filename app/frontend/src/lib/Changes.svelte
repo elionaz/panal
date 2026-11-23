@@ -14,6 +14,8 @@
   import { groupPRs, selectedBranch, showPRList } from './sessionprs'
   import { shortBranch } from './branch'
   import { joinNames } from './shared'
+  import { covers, extend, notePlace, pickLine, reviewMessage, type LineRef, type Note, type Side } from './review'
+  import { addNote, clearNotes, notesFor, removeNote } from './reviewdrafts.svelte'
 
   interface Props {
     /** What to diff: a session, or a worktree without one. */
@@ -38,9 +40,13 @@
     onRemoved?: () => void
     /** Shown as a close button (orphan overlay). */
     onClose?: () => void
+    /** The session's name when its agent can take messages: notes on the
+     * diff and the pull request's checks and comments can be sent to it. */
+    sendTo?: string
   }
 
-  let { sessionId, worktreeId, live = false, sharedWith = [], onMoveToWorktree, gitStamp, prStamp, startRemove = false, onError, onRemoved, onClose }: Props = $props()
+  let { sessionId, worktreeId, live = false, sharedWith = [], onMoveToWorktree, gitStamp, prStamp, startRemove = false, onError, onRemoved, onClose, sendTo = '' }: Props =
+    $props()
 
   const STYLE_KEY = 'panal.diffStyle'
   /** Below this width (px) the automatic style is unified: two columns
@@ -79,6 +85,18 @@
   let prListSeq = 0
   const prBranch = $derived(selectedBranch(prList, prPicked))
   let notice = $state<string | null>(null)
+
+  // Notes on the diff's lines for the session's agent (review.ts).
+  const canReview = $derived(!!sessionId && !!sendTo)
+  const notes = $derived(sessionId ? notesFor(sessionId) : [])
+  /** The last clicked line: shift-click makes a range from it. */
+  let anchor = $state<LineRef | null>(null)
+  /** The lines being written about, before Add note. */
+  let draft = $state<Omit<Note, 'id' | 'text'> | null>(null)
+  let draftText = $state('')
+  let draftEl = $state<HTMLTextAreaElement | null>(null)
+  let diffEl = $state<HTMLElement | null>(null)
+  let sendingNotes = $state(false)
 
   // Remove confirmation.
   let removing = $state(false)
@@ -175,6 +193,8 @@
       diff = null
       selectedPath = null
       removing = merging = prOpen = removeOffer = false
+      draft = anchor = null
+      draftText = ''
       prSeq++
       prLoading = false
     }
@@ -358,6 +378,109 @@
     }
   }
 
+  /** Sends body to the session as a message from the user. */
+  async function sendToSession(body: string): Promise<boolean> {
+    if (!sessionId) return false
+    try {
+      await api.sendMessage(sessionId, body)
+      return true
+    } catch (e) {
+      onError(errorMessage(e))
+      return false
+    }
+  }
+
+  const NUM_CELLS = '.d2h-code-linenumber, .d2h-code-side-linenumber'
+
+  /** The file line a diff number cell stands for. Side by side, the left
+   * column counts in the old file: an unchanged line there takes its number
+   * in the new file, from the same row on the right. */
+  function lineOf(cell: Element): { side: Side; line: number } | null {
+    if (!cell.classList.contains('d2h-code-side-linenumber')) {
+      return pickLine(cell.querySelector('.line-num1')?.textContent ?? '', cell.querySelector('.line-num2')?.textContent ?? '')
+    }
+    const sides = diffEl?.querySelectorAll('.d2h-file-side-diff')
+    const text = cell.textContent ?? ''
+    if (!text.trim()) return null // the filler facing a line of the other column
+    if (!sides || !sides[0]?.contains(cell)) return pickLine('', text)
+    if (cell.classList.contains('d2h-cntx')) {
+      const tr = cell.closest('tr')
+      const i = tr?.parentElement ? Array.prototype.indexOf.call(tr.parentElement.children, tr) : -1
+      const right = i >= 0 ? sides[1]?.querySelectorAll('tbody tr')[i]?.querySelector(NUM_CELLS) : null
+      const r = right ? pickLine('', right.textContent ?? '') : null
+      if (r) return r
+    }
+    return pickLine(text, '')
+  }
+
+  function codeOf(cell: Element): string {
+    return cell.closest('tr')?.querySelector('.d2h-code-line-ctn')?.textContent ?? ''
+  }
+
+  /** Every numbered line of the rendered diff: its cell and code. */
+  function diffLines(): Array<{ cell: Element; side: Side; line: number; code: string }> {
+    const out: Array<{ cell: Element; side: Side; line: number; code: string }> = []
+    diffEl?.querySelectorAll(NUM_CELLS).forEach((cell) => {
+      const l = lineOf(cell)
+      if (l) out.push({ cell, ...l, code: codeOf(cell) })
+    })
+    return out
+  }
+
+  function onDiffClick(e: MouseEvent) {
+    if (!canReview || !selected) return
+    const cell = (e.target as Element | null)?.closest(NUM_CELLS)
+    if (!cell || !diffEl?.contains(cell)) return
+    const l = lineOf(cell)
+    if (!l) return
+    const ref: LineRef = { path: selected.path, ...l, code: codeOf(cell) }
+    const lines = diffLines()
+    draft = extend(anchor, ref, e.shiftKey, (n) => lines.find((x) => x.side === ref.side && x.line === n)?.code ?? '')
+    if (!e.shiftKey || !anchor) anchor = ref
+    window.setTimeout(() => draftEl?.focus())
+  }
+
+  function saveDraft() {
+    if (!sessionId || !draft || !draftText.trim()) return
+    addNote(sessionId, { ...draft, text: draftText.trim() })
+    draft = null
+    draftText = ''
+  }
+
+  function cancelDraft() {
+    draft = null
+    draftText = ''
+  }
+
+  async function sendNotes() {
+    if (!sessionId || !notes.length) return
+    const id = sessionId
+    const n = notes.length
+    sendingNotes = true
+    try {
+      if (await sendToSession(reviewMessage(notes, t))) {
+        clearNotes(id)
+        flash(t('review.sent', { n, name: sendTo }))
+      }
+    } finally {
+      sendingNotes = false
+    }
+  }
+
+  // Marks the lines with a note (and the ones being written about) in the
+  // rendered diff; runs again whenever it is rendered anew.
+  $effect(() => {
+    void rendered
+    const path = selected?.path ?? ''
+    const ns = notes
+    const d = draft
+    for (const x of diffLines()) {
+      const row = x.cell.closest('tr')
+      row?.classList.toggle('rv-note', ns.some((n) => covers(n, path, x.side, x.line)))
+      row?.classList.toggle('rv-draft', !!d && d.path === path && d.side === x.side && x.line >= d.start && x.line <= d.end)
+    }
+  })
+
   onMount(() => {
     if (startRemove) askRemove()
   })
@@ -510,6 +633,8 @@
             removeOffer = true
           }
         : undefined}
+      sendTo={sessionId && live ? sendTo : ''}
+      onSend={sendToSession}
       bind:available={forgeAvailable}
       bind:hasPR
       bind:creating={prCreating}
@@ -615,6 +740,24 @@
     {/if}
     <div class="body">
       <aside class="files">
+        {#if canReview && notes.length}
+          <div class="notes">
+            <div class="section">{t('review.title', { n: notes.length })}</div>
+            <ul>
+              {#each notes as n (n.id)}
+                <li>
+                  <button class="nplace" title={n.code.join('\n')} onclick={() => (selectedPath = n.path)}>{notePlace(n, t)}</button>
+                  <span class="ntext" title={n.text}>{n.text}</span>
+                  <button class="nx" title={t('review.remove')} aria-label={t('review.remove')} onclick={() => sessionId && removeNote(sessionId, n.id)}>×</button>
+                </li>
+              {/each}
+            </ul>
+            <div class="nrow">
+              <button class="btn primary" disabled={sendingNotes} onclick={sendNotes}>{t('review.send', { name: sendTo })}</button>
+              <button class="btn" onclick={() => sessionId && clearNotes(sessionId)}>{t('review.discard')}</button>
+            </div>
+          </div>
+        {/if}
         {#if diff.commits.length}
           <button class="section toggle" aria-expanded={commitsOpen} onclick={() => (commitsOpen = !commitsOpen)}
             ><span class="caret" class:open={commitsOpen}>▸</span> {t('changes.commits', { n: diff.commits.length })}</button
@@ -640,9 +783,12 @@
         {:else}
           <p class="muted pad">{isWorktree ? t('changes.noChangesBase', { base: diff.base ?? '' }) : t('changes.noChanges')}</p>
         {/each}
+        {#if canReview && !notes.length && diff.files.some((f) => f.patch)}<p class="muted pad hint">{t('review.hint')}</p>{/if}
       </aside>
-      <section class="diff" class:wrap={style === 'line-by-line'} bind:clientWidth={diffWidth}>
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <section class="diff" class:wrap={style === 'line-by-line'} class:reviewable={canReview} bind:clientWidth={diffWidth} bind:this={diffEl} onclick={onDiffClick}>
         {#if selected}
+          <div class="dtop">
           <div class="diff-head">
             <span class={statusClass(selected)}>{selected.status}</span>
             <span class="dpath" title={selected.oldPath ? `${selected.oldPath} → ${selected.path}` : selected.path}
@@ -653,6 +799,28 @@
               <button class:on={style === 'line-by-line'} title={t('changes.unified')} aria-label={t('changes.unified')} onclick={() => setStyle('line-by-line')}>≡</button>
               <button class:on={style === 'side-by-side'} title={t('changes.sideBySide')} aria-label={t('changes.sideBySide')} onclick={() => setStyle('side-by-side')}>◫</button>
             </span>
+          </div>
+          {#if canReview && draft}
+            <div class="composer">
+              <div class="cplace">{t('review.addFor', { place: notePlace(draft, t) })}</div>
+              <textarea
+                rows="3"
+                bind:this={draftEl}
+                bind:value={draftText}
+                placeholder={t('review.placeholder')}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    saveDraft()
+                  } else if (e.key === 'Escape') cancelDraft()
+                }}
+              ></textarea>
+              <div class="nrow">
+                <button class="btn primary" disabled={!draftText.trim()} onclick={saveDraft}>{t('review.add')}</button>
+                <button class="btn" onclick={cancelDraft}>{t('review.cancel')}</button>
+              </div>
+            </div>
+          {/if}
           </div>
           {#if selected.binary}
             <div class="empty"><p class="muted">{t('changes.binary', { path: selected.path })}</p></div>
@@ -1156,10 +1324,115 @@
     font-size: 10.5px;
     color: var(--muted);
   }
-  .diff-head {
+  .dtop {
     position: sticky;
     top: 0;
     z-index: 2;
+    flex: none;
+  }
+  .composer {
+    padding: 8px 12px;
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .cplace {
+    margin-bottom: 4px;
+    font-family: var(--mono);
+    color: var(--fg-dim);
+  }
+  .composer textarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 5px 7px;
+  }
+  .nrow {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .notes {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .notes ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .notes li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 6px;
+    padding: 3px 4px;
+    font-size: 12px;
+  }
+  .nplace {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--blue);
+  }
+  .nplace:hover {
+    text-decoration: underline;
+  }
+  .ntext {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--fg-dim);
+  }
+  .nx {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    color: var(--muted);
+  }
+  .nx:hover {
+    color: var(--red);
+  }
+  .notes .nrow {
+    padding: 0 12px;
+  }
+  .hint {
+    font-size: 11.5px;
+  }
+  .diff.reviewable :global(.d2h-code-linenumber:not(.d2h-info)),
+  .diff.reviewable :global(.d2h-code-side-linenumber:not(.d2h-info)) {
+    cursor: pointer;
+  }
+  .diff.reviewable :global(.d2h-code-linenumber:not(.d2h-info):hover),
+  .diff.reviewable :global(.d2h-code-side-linenumber:not(.d2h-info):hover) {
+    color: var(--fg);
+    background: var(--accent-bg);
+  }
+  .diff :global(tr.rv-note .d2h-code-linenumber),
+  .diff :global(tr.rv-note .d2h-code-side-linenumber) {
+    box-shadow: inset 3px 0 0 var(--blue);
+    background: color-mix(in srgb, var(--blue) 16%, var(--bg));
+  }
+  .diff :global(tr.rv-draft .d2h-code-linenumber),
+  .diff :global(tr.rv-draft .d2h-code-side-linenumber) {
+    box-shadow: inset 3px 0 0 var(--amber);
+    background: color-mix(in srgb, var(--amber) 18%, var(--bg));
+  }
+  .diff-head {
     flex: none;
     display: flex;
     align-items: center;
