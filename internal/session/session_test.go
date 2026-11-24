@@ -29,9 +29,14 @@ func spawn(t *testing.T, o Options) *Session {
 
 func waitDone(t *testing.T, s *Session) {
 	t.Helper()
+	waitDoneWithin(t, s, 5*time.Second)
+}
+
+func waitDoneWithin(t *testing.T, s *Session, d time.Duration) {
+	t.Helper()
 	select {
 	case <-s.Done():
-	case <-time.After(5 * time.Second):
+	case <-time.After(d):
 		t.Fatal("session did not exit")
 	}
 }
@@ -103,7 +108,10 @@ func TestAttachLiveAndResize(t *testing.T) {
 func TestSlowSubscriberDropped(t *testing.T) {
 	s := spawn(t, Options{Cmd: "/bin/sh", Args: []string{"-c", "yes | head -c 2000000"}, RingSize: 1024})
 	_, slow := s.Attach() // never read
-	waitDone(t, s)
+	// 2 MB through the PTY (enough to overflow the queue with Linux's 4 KB
+	// reads) takes 0.7s here but over 5s on a busy macOS CI runner under
+	// -race: a generous limit, a hang still fails.
+	waitDoneWithin(t, s, 30*time.Second)
 	for range slow.C {
 	}
 	if !slow.Dropped() {
