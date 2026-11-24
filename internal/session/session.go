@@ -86,6 +86,9 @@ type Options struct {
 const (
 	patternQuiet = 300 * time.Millisecond
 	tailSize     = 2048
+	// bellAfterKey: a bare BEL this soon after a key or terminal reply
+	// (not Enter) is a reaction to it, not a notification.
+	bellAfterKey = 500 * time.Millisecond
 )
 
 // Session is a running (or exited) PTY process. Identity fields are immutable
@@ -134,6 +137,11 @@ type Session struct {
 	onActivity func(*Session, bool)
 	stallFlip  atomic.Bool // the stalled flag flipped since the last emission
 	emitMu     sync.Mutex  // serialises OnActivity calls
+
+	// beepAt: when input that doesn't submit last went to the PTY
+	// (UnixNano): a key or a terminal reply (focus, reports). A bell right
+	// after it is the program beeping at it.
+	beepAt atomic.Int64
 
 	done     chan struct{}
 	readDone chan struct{}
@@ -295,6 +303,12 @@ func (s *Session) scan(chunk []byte) {
 		if sg.Progress != nil {
 			// Progress bars are information, never a request for attention.
 			s.act.setProgress(*sg.Progress)
+			return
+		}
+		if sg.Bell && time.Since(time.Unix(0, s.beepAt.Load())) < bellAfterKey {
+			// The program beeping at what it was just sent (an unbound key,
+			// a failed completion, focus reports left on by an editor), not
+			// a request for attention.
 			return
 		}
 		s.status.Signal(status.KindQuestion, sg.Text())
@@ -593,6 +607,7 @@ func (s *Session) Write(p []byte) (int, error) {
 		return 0, errors.New("session exited")
 	default:
 	}
+	beep := true // a bell soon after this is a beep at it
 	if !isTerminalReply(p) {
 		s.status.Input()
 		s.tailMu.Lock()
@@ -601,8 +616,16 @@ func (s *Session) Write(p []byte) (int, error) {
 			s.draft = !submits(s.lastIn, p)
 			s.lastIn = p[len(p)-1]
 			s.inputAt = time.Now()
+			// After a line ends (or Ctrl-C) the bell is the command's own.
+			last := p[len(p)-1]
+			beep = last != '\r' && last != '\n' && last != 0x03
 		}
 		s.tailMu.Unlock()
+	}
+	if beep {
+		s.beepAt.Store(time.Now().UnixNano())
+	} else {
+		s.beepAt.Store(0)
 	}
 	return s.ptmx.Write(p)
 }

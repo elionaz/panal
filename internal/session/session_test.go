@@ -158,6 +158,45 @@ func TestAttentionPatterns(t *testing.T) {
 	}
 }
 
+// A bell right after something reached the PTY (here a focus report the
+// program doesn't understand, as zsh with focus reporting left on by vim)
+// is a beep at that input; a bell later on asks for attention.
+func TestBellRightAfterInputIsNoQuestion(t *testing.T) {
+	changes := make(chan status.Change, 16)
+	s := spawn(t, Options{Cmd: "/bin/sh", Args: []string{"-c", `stty raw -echo; printf 'ready\n'; dd bs=1 count=3 2>/dev/null >/dev/null; printf '\a'; sleep 1; printf 'done\a'; sleep 5`},
+		IdleAfter: time.Hour,
+		OnState:   func(c status.Change) { changes <- c },
+	})
+	snap, sub := s.Attach()
+	defer sub.Close()
+	got := string(snap)
+	for wait := time.After(5 * time.Second); !strings.Contains(got, "ready"); {
+		select {
+		case c := <-sub.C:
+			got += string(c)
+		case <-wait:
+			t.Fatalf("no prompt, got %q", got)
+		}
+	}
+	wrote := time.Now()
+	s.Write([]byte("\x1b[I"))
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case c := <-changes:
+			if !c.Raised {
+				continue
+			}
+			if since := time.Since(wrote); since < 900*time.Millisecond {
+				t.Fatalf("the beep at the input raised %s after it: %+v", since, c)
+			}
+			return
+		case <-deadline:
+			t.Fatal("the later bell did not raise attention")
+		}
+	}
+}
+
 func TestIsTerminalReply(t *testing.T) {
 	for in, want := range map[string]bool{
 		"\x1b[I": true, "\x1b[O": true, "\x1b[?1;2c": true, "\x1b[12;5R": true, "\x1b]11;rgb:1414/1515/1818\x1b\\": true,
