@@ -7,6 +7,19 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- **The session's browser, inside panal.** While a session's own Chrome is open, its new
+  **Browser** tab shows it live: its tabs (the one the agent last opened or navigated; click another
+  to watch it), the page's address and a button to close it. It only shows: the agent keeps driving
+  the browser. See [docs/configuration.md](docs/configuration.md#browser-for-agents).
+
+### Changed
+
+- **The agents' browsers run without a window by default** (`browser.headless: true`), now that
+  the Browser tab shows them: no more Chrome windows popping up over your work. Turn it off in
+  Settings → General to get the window back. A `browser.headless` you saved before is kept.
+
 ## [0.15.1] - 2026-11-21
 
 ### Changed

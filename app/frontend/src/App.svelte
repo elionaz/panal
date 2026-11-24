@@ -5,6 +5,7 @@
   import { EventsOn, WindowSetTitle } from '../wailsjs/runtime/runtime'
   import Changes from './lib/Changes.svelte'
   import Messages from './lib/Messages.svelte'
+  import BrowserView from './lib/BrowserView.svelte'
   import { showMessagesTab } from './lib/messages'
   import { ackOnView } from './lib/attention'
   import Grid from './lib/Grid.svelte'
@@ -118,7 +119,7 @@
   /** panal worktrees per project (for the orphan lists). */
   let worktrees = $state<Record<string, WorktreeInfo[]>>({})
   /** Which tab each session shows: terminal (default) or its changes. */
-  let views = $state<Record<string, 'terminal' | 'changes' | 'messages'>>({})
+  let views = $state<Record<string, 'terminal' | 'changes' | 'messages' | 'browser'>>({})
   /** Bumped per session on message.changed: the Messages tab reloads. */
   let msgStamps = $state<Record<string, number>>({})
   /** An orphaned worktree's changes shown over the main area. */
@@ -149,10 +150,13 @@
   const hasChanges = $derived(!!selected && (selected.mode === 'worktree' || !!selected.git))
   /** The project has other sessions (or this one has messages): offer Mensajes. */
   const hasMessages = $derived(!!selected && showMessagesTab(selected, sessions, msgStamps[selected.id] ?? 0))
+  /** The session's own browser is open: offer Navegador. */
+  const hasBrowser = $derived(!!selected?.browserUrl)
   const view = $derived.by(() => {
     const v = selected ? (views[selected.id] ?? 'terminal') : 'terminal'
     if (v === 'changes' && !hasChanges) return 'terminal'
     if (v === 'messages' && !hasMessages) return 'terminal'
+    if (v === 'browser' && !hasBrowser) return 'terminal'
     return v
   })
 
@@ -174,7 +178,7 @@
     terms.setPrefs(termPrefs())
   })
 
-  function setView(v: 'terminal' | 'changes' | 'messages') {
+  function setView(v: 'terminal' | 'changes' | 'messages' | 'browser') {
     if (!selected) return
     views[selected.id] = v
     if (v === 'terminal') terms.focus(selected.id)
@@ -1201,7 +1205,7 @@
       {/if}
     </header>
 
-    {#if selected && (hasChanges || hasMessages)}
+    {#if selected && (hasChanges || hasMessages || hasBrowser)}
       <nav class="view-tabs">
         <button class:on={view === 'terminal'} onclick={() => setView('terminal')}>{t('view.terminal')}</button>
         {#if hasChanges}
@@ -1213,6 +1217,9 @@
           <button class:on={view === 'messages'} onclick={() => setView('messages')}
             >{t('view.messages')}{selected.msgPending ? ` (${selected.msgPending})` : ''}</button
           >
+        {/if}
+        {#if hasBrowser}
+          <button class:on={view === 'browser'} onclick={() => setView('browser')}>{t('view.browser')}</button>
         {/if}
       </nav>
     {/if}
@@ -1275,6 +1282,11 @@
                     stamp={msgStamps[selected.id] ?? 0}
                     onError={showError}
                   />
+                {/if}
+                {#if focused && selected && view === 'browser'}
+                  {#key selected.browserUrl}
+                    <BrowserView sessionId={selected.id} onError={showError} />
+                  {/key}
                 {/if}
                 {#if focused && search.open && search.session === p.leaf.session}
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
