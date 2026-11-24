@@ -9,6 +9,12 @@ releases may include breaking changes.
 
 ### Added
 
+- **Feedback for the agent from Changes.** Click a line number of a live agent session's diff to
+  leave a note on that line (shift-click for a range); **Send to &lt;session&gt;** sends every note as one
+  message, with each place and the code quoted. In the pull request block, *Ask &lt;session&gt; to fix
+  them* sends the failing checks, and the comments can be sent one by one or all at once. See
+  [Notes for the agent](docs/worktrees.md#notes-for-the-agent).
+
 - **The session's browser, inside panal.** While a session's own Chrome is open, its new
   **Browser** tab shows it live: its tabs (the one the agent last opened or navigated; click another
   to watch it), the page's address and a button to close it. It only shows: the agent keeps driving

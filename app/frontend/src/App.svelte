@@ -6,7 +6,7 @@
   import Changes from './lib/Changes.svelte'
   import Messages from './lib/Messages.svelte'
   import BrowserView from './lib/BrowserView.svelte'
-  import { showMessagesTab } from './lib/messages'
+  import { isShellSession, showMessagesTab } from './lib/messages'
   import { ackOnView } from './lib/attention'
   import Grid from './lib/Grid.svelte'
   import ProgressBar from './lib/ProgressBar.svelte'
@@ -1267,6 +1267,7 @@
                       : undefined}
                     gitStamp={selected.git ? `${selected.git.head ?? ''}|${selected.git.files}|${selected.git.uncommitted}|${selected.git.ahead}` : ''}
                     prStamp={selected.git ? `${selected.git.head ?? ''}|${selected.git.ahead}` : ''}
+                    sendTo={selected.state !== 'exited' && !isShellSession(selected) ? sessionTitle(selected) : ''}
                     onError={showError}
                     onRemoved={() => {
                       setView('terminal')

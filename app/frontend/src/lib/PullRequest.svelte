@@ -7,6 +7,7 @@
   import { api, errorMessage, type ForgeComment, type ForgeStatus } from './api'
   import { canMerge, commentPlace, forgeView, hostName, mergeWarnings, prBody, prRef } from './forge'
   import { hasKey, locale, t, type Params } from './i18n.svelte'
+  import { checksMessage, commentsMessage } from './review'
 
   interface Props {
     sessionId?: string
@@ -27,6 +28,11 @@
     /** Another branch the session worked on ('' = the one it is on now):
      * its pull request is shown, and none is created for it. */
     branch?: string
+    /** The session's name when it can take messages: the checks and
+     * comments can then be sent to its agent. */
+    sendTo?: string
+    /** Sends a message to the session; false when it failed (reported). */
+    onSend?: (body: string) => Promise<boolean>
   }
 
   let {
@@ -40,6 +46,8 @@
     hasPR = $bindable(false),
     creating = $bindable(false),
     branch = '',
+    sendTo = '',
+    onSend,
   }: Props = $props()
 
   let status = $state<ForgeStatus | null>(null)
@@ -218,6 +226,22 @@
     return hasKey(key) ? t(key, params) : key.slice(key.lastIndexOf('.') + 1)
   }
 
+  const canSend = $derived(!!sendTo && !!onSend)
+  let sending = $state(false)
+  async function send(body: string) {
+    if (!onSend || sending) return
+    sending = true
+    try {
+      if (await onSend(body)) {
+        const msg = t('pr.sent', { name: sendTo })
+        notice = msg
+        window.setTimeout(() => notice === msg && (notice = ''), 4000)
+      }
+    } finally {
+      sending = false
+    }
+  }
+
   function when(at: string | undefined): string {
     if (!at) return ''
     const d = new Date(at)
@@ -248,6 +272,9 @@
           </span>
         {/if}
         {#if pr.review}<span class="review rv-{pr.review}">{tv(`pr.review.${pr.review}`)}</span>{/if}
+        {#if canSend && pr.checks.state === 'failing' && canMerge(pr)}
+          <button class="btn" disabled={sending} onclick={() => pr && send(checksMessage(status?.kind, pr, t))}>{t('pr.sendChecks', { name: sendTo })}</button>
+        {/if}
         <span class="spacer"></span>
         <button class="btn" onclick={toggleComments}>
           {commentsOpen ? t('pr.hideComments') : comments ? t('pr.comments', { n: comments.length }) : t('pr.showComments')}
@@ -313,6 +340,13 @@
         {:else if comments && !comments.length}
           <p class="muted">{t('pr.noComments')}</p>
         {:else if comments}
+          {#if canSend}
+            <div class="sendall">
+              <button class="btn" disabled={sending} onclick={() => pr && comments && send(commentsMessage(status?.kind, pr, comments, t, hasKey))}
+                >{t('pr.sendComments', { name: sendTo })}</button
+              >
+            </div>
+          {/if}
           {#each comments as c, i (i)}
             <div class="comment">
               <div class="meta">
@@ -323,6 +357,9 @@
                 {/if}
                 <span class="muted">{when(c.at)}</span>
                 <span class="spacer"></span>
+                {#if canSend}<button class="link" disabled={sending} onclick={() => pr && send(commentsMessage(status?.kind, pr, [c], t, hasKey))}
+                    >{t('pr.sendComment', { name: sendTo })}</button
+                  >{/if}
                 {#if c.url}<button class="link" onclick={() => BrowserOpenURL(c.url ?? '')}>{t('pr.openOn', { host })}</button>{/if}
               </div>
               {#if c.body.trim()}<div class="body">{c.body}</div>{/if}
@@ -504,6 +541,11 @@
     max-height: 280px;
     overflow-y: auto;
     border-top: 1px dashed var(--border);
+  }
+  .sendall {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 0 2px;
   }
   .comment {
     padding: 7px 0;
