@@ -15,6 +15,25 @@ releases may include breaking changes.
   them* sends the failing checks, and the comments can be sent one by one or all at once. See
   [Notes for the agent](docs/worktrees.md#notes-for-the-agent).
 
+- **The session's browser, inside panal.** While a session's own Chrome is open, its new
+  **Browser** tab shows it live: its tabs (the one the agent last opened or navigated; click another
+  to watch it), the page's address and a button to close it. It only shows: the agent keeps driving
+  the browser. See [docs/configuration.md](docs/configuration.md#browser-for-agents).
+
+### Changed
+
+- **The agents' browsers run without a window by default** (`browser.headless: true`), now that
+  the Browser tab shows them: no more Chrome windows popping up over your work. Turn it off in
+  Settings → General to get the window back. A `browser.headless` you saved before is kept.
+
+### Fixed
+
+- **A shell no longer gets stuck on "question" from its own beeps.** A bell that comes right after
+  a key or an automatic terminal report (not Enter) is the program beeping at it, not asking for
+  you. The common case: after vim, focus reports stayed on, so each time you entered or left the
+  terminal zsh beeped at them and the session went back to "question". A bell after Enter, or on
+  its own later, still asks for attention.
+
 ## [0.15.1] - 2026-11-21
 
 ### Changed

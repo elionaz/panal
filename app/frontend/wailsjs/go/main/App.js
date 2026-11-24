@@ -166,6 +166,10 @@ export function OpenWorktree(arg1, arg2, arg3) {
   return window['go']['main']['App']['OpenWorktree'](arg1, arg2, arg3);
 }
 
+export function PickBrowserPage(arg1, arg2) {
+  return window['go']['main']['App']['PickBrowserPage'](arg1, arg2);
+}
+
 export function ProfileCatalog() {
   return window['go']['main']['App']['ProfileCatalog']();
 }
@@ -306,12 +310,20 @@ export function TestNotification(arg1, arg2) {
   return window['go']['main']['App']['TestNotification'](arg1, arg2);
 }
 
+export function UnwatchBrowser(arg1) {
+  return window['go']['main']['App']['UnwatchBrowser'](arg1);
+}
+
 export function UpdateProject(arg1) {
   return window['go']['main']['App']['UpdateProject'](arg1);
 }
 
 export function UpdaterState() {
   return window['go']['main']['App']['UpdaterState']();
+}
+
+export function WatchBrowser(arg1) {
+  return window['go']['main']['App']['WatchBrowser'](arg1);
 }
 
 export function WindowFocus(arg1) {
