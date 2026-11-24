@@ -92,6 +92,8 @@ export function OpenNotificationSettings():Promise<void>;
 
 export function OpenWorktree(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function PickBrowserPage(arg1:string,arg2:string):Promise<void>;
+
 export function ProfileCatalog():Promise<Array<protocol.CatalogInfo>>;
 
 export function ProjectGit(arg1:string):Promise<protocol.ProjectGit>;
@@ -162,9 +164,13 @@ export function TakePendingFocus():Promise<string>;
 
 export function TestNotification(arg1:string,arg2:string):Promise<void>;
 
+export function UnwatchBrowser(arg1:string):Promise<void>;
+
 export function UpdateProject(arg1:protocol.ProjectUpdateParams):Promise<project.Project>;
 
 export function UpdaterState():Promise<main.UpdaterState>;
+
+export function WatchBrowser(arg1:string):Promise<void>;
 
 export function WindowFocus(arg1:boolean):Promise<void>;
 

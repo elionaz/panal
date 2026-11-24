@@ -168,7 +168,7 @@ Todas las claves son opcionales; las que faltan toman el valor por defecto.
 | `messages.auto_deliver` | `true` | el modo de mensajes de los proyectos que no eligieron uno (cada proyecto lo cambia con el botón ⇄ / ⏸ de la barra lateral o con `panal project set --messages`): `true` es automático (el mensaje le llega a su sesión en cuanto puede recibirlo y la despierta si está inactiva, nunca sobre texto escrito sin enviar, como mucho 5 veces por sesión hasta que vuelvas a intervenir en ella y 20 por proyecto cada 10 minutos), `false` es manual (los mensajes esperan a que los entregues tú). Ver [messages.md](messages.md#automático-o-manual-por-proyecto) |
 | `browser.enabled` | `true` | cada sesión tiene su propio Chrome aislado; ver [Navegador para los agentes](#navegador-para-los-agentes) |
 | `mcp.enabled` | `true` | las sesiones de agente reciben el servidor MCP de panal (sesiones, mensajes, esperar, estado, historial); ver [mcp.md](mcp.md) |
-| `browser.headless` | `false` | corre esos navegadores sin ventana |
+| `browser.headless` | `true` | corre esos navegadores sin ventana (los miras en la pestaña **Navegador** de la sesión) |
 | `browser.path` | `""` | un ejecutable compatible con Chrome; vacío: Google Chrome, Chromium, Microsoft Edge o Brave, el que esté instalado |
 | `history.enabled` | `true` | guardar las sesiones de agente que terminan, para buscarlas; ver [Sesiones pasadas](#sesiones-pasadas) |
 | `history.keep` | `300` | cuántas sesiones terminadas se guardan (1–5000); las más viejas se van primero |
@@ -330,7 +330,7 @@ propio Chrome: mueven y cambian el tamaño de su ventana, abren pestañas entre 
 sesiones iniciadas. panal le da a cada sesión **su propio Chrome**:
 
 - con su propio perfil en `~/.panal/browsers/<sessionId>/` (ninguna de tus pestañas, cookies,
-  extensiones ni sesiones iniciadas), un tamaño de ventana fijo (1280×800) y su propio puerto de
+  extensiones ni sesiones iniciadas), un tamaño de página fijo (1280×800) y su propio puerto de
   DevTools en `127.0.0.1`, desde el 9222;
 - **solo se abre cuando el agente lo necesita** y se cierra cuando termina la sesión; el perfil se
   borra cuando se quita la sesión (lo que se inicie ahí dura lo que dura la sesión);
@@ -345,12 +345,15 @@ sesiones iniciadas. panal le da a cada sesión **su propio Chrome**:
 - las instrucciones que reciben Claude Code y codex (ver
   [Instrucciones](#instrucciones-para-los-agentes)) les dicen que lo usen y nunca tu Chrome;
 - un 🌐 en la fila de la sesión indica que su navegador está abierto; clic para copiar la dirección,
-  ⌥-clic para cerrarlo.
+  ⌥-clic para cerrarlo;
+- mientras está abierto, la pestaña **Navegador** de la sesión lo muestra en vivo: sus pestañas (se ve la
+  que el agente abrió o navegó por última vez; clic en otra para mirarla), la dirección de la página y un
+  botón para cerrarlo. Solo muestra: el agente maneja el navegador, tus clics no llegan a la página.
 
 Necesita un navegador compatible con Chrome (Google Chrome, Chromium, Microsoft Edge, Brave o
 `browser.path`) y, para las herramientas de navegador, Node.js (`npx`); *Ajustes → General* muestra
-lo que encontró. Se apaga con `browser.enabled: false`; `browser.headless: true` lo corre sin
-ventana.
+lo que encontró. Se apaga con `browser.enabled: false`; por omisión corre sin ventana (lo miras
+en la pestaña Navegador); `browser.headless: false` le da además su propia ventana.
 
 Un agente que usa una extensión de navegador (como Claude in Chrome) igual llega a tu Chrome a
 través de ella: panal no puede impedirlo, solo le da un navegador mejor y le dice que lo use.

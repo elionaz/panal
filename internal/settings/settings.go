@@ -237,7 +237,8 @@ type Browser struct {
 	// server bound to the session's own Chrome; every session can start it
 	// with panal browser.
 	Enabled bool `json:"enabled"`
-	// Headless: no window.
+	// Headless (default): no window; the app shows it in the session's
+	// Browser tab.
 	Headless bool `json:"headless"`
 	// Path of the Chrome-compatible executable; "" finds one.
 	Path string `json:"path"`
@@ -472,7 +473,7 @@ func Defaults() Settings {
 		Sessions: Sessions{Restore: RestoreAsk},
 		Terminal: normTerminal(Terminal{}),
 		Messages: Messages{Enabled: true, AutoDeliver: true},
-		Browser:  Browser{Enabled: true},
+		Browser:  Browser{Enabled: true, Headless: true},
 		MCP:      MCP{Enabled: true},
 		History:  History{Enabled: true, Keep: DefaultHistoryKeep},
 	}

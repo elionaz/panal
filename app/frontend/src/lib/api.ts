@@ -199,6 +199,11 @@ export const api = {
   /** Whether sessions get their own browser, and the Chrome and npx found. */
   browserStatus: (): Promise<BrowserStatus> => App.BrowserStatus(),
   closeBrowser: (sessionId: string): Promise<void> => App.CloseBrowser(sessionId),
+  /** The Browser tab: a live image of the session's open browser (events
+   * browser:pages:<id>, browser:frame:<id>, browser:end:<id>), one session at a time. */
+  watchBrowser: (sessionId: string): Promise<void> => App.WatchBrowser(sessionId),
+  pickBrowserPage: (sessionId: string, pageId: string): Promise<void> => App.PickBrowserPage(sessionId, pageId),
+  unwatchBrowser: (sessionId: string): Promise<void> => App.UnwatchBrowser(sessionId),
   /** The instruction topics; with projectId, composed is what its sessions receive. */
   instructions: (projectId: string): Promise<Instructions> => App.Instructions(projectId),
   /** Saves a topic (new when oldSlug is ''). */

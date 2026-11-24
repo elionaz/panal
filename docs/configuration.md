@@ -164,7 +164,7 @@ Every key is optional; missing ones take the default value.
 | `messages.auto_deliver` | `true` | the messages mode of projects that haven't chosen one (each project switches with the ⇄ / ⏸ button in the sidebar or `panal project set --messages`): `true` is automatic (a message reaches its session as soon as it can take it, waking it when idle, never over text typed without sending, at most 5 times per session until you act on it again and 20 per project every 10 minutes), `false` is manual (messages wait for you to deliver them). See [messages.md](messages.md#automatic-or-manual-per-project) |
 | `browser.enabled` | `true` | each session gets its own isolated Chrome; see [Browser for agents](#browser-for-agents) |
 | `mcp.enabled` | `true` | agent sessions get panal's MCP server (peers, messages, wait, status, history); see [mcp.md](mcp.md) |
-| `browser.headless` | `false` | run those browsers without a window |
+| `browser.headless` | `true` | run those browsers without a window (you watch them in the session's **Browser** tab) |
 | `browser.path` | `""` | a Chrome-compatible executable; empty: Google Chrome, Chromium, Microsoft Edge or Brave, whichever is installed |
 | `history.enabled` | `true` | keep ended agent sessions, searchable; see [Past sessions](#past-sessions) |
 | `history.keep` | `300` | how many ended sessions are kept (1–5000); the oldest go first |
@@ -320,7 +320,7 @@ move and resize its window, open tabs among yours and see your logins. panal giv
 **its own Chrome** instead:
 
 - its own profile in `~/.panal/browsers/<sessionId>/` (none of your tabs, cookies, extensions or
-  logins), a fixed window size (1280×800) and its own DevTools port on `127.0.0.1`, from 9222;
+  logins), a fixed page size (1280×800) and its own DevTools port on `127.0.0.1`, from 9222;
 - it **opens only when the agent needs it** and closes when the session exits; the profile is
   deleted when the session is removed (logins made there last as long as the session);
 - **Claude Code** and **codex** sessions get it as browser tools: the
@@ -334,11 +334,14 @@ move and resize its window, open tabs among yours and see your logins. panal giv
 - the instructions handed to Claude Code and codex (see
   [Standing instructions](#standing-instructions-for-the-agents)) tell them to use it and never your
   Chrome;
-- a 🌐 in the session's row shows its browser is open; click it to copy the URL, ⌥-click to close it.
+- a 🌐 in the session's row shows its browser is open; click it to copy the URL, ⌥-click to close it;
+- while it's open, the session's **Browser** tab shows it live: its tabs (the one the agent last opened or
+  navigated is shown; click another to watch it), the page's address and a button to close it. It only
+  shows: the agent drives the browser, your clicks don't reach the page.
 
 It needs a Chrome-compatible browser (Google Chrome, Chromium, Microsoft Edge, Brave or
 `browser.path`) and, for the browser tools, Node.js (`npx`); **Settings → General** shows what was
-found. Turn it off with `browser.enabled: false`; `browser.headless: true` runs it without a window.
+found. Turn it off with `browser.enabled: false`; by default it runs without a window (you watch it in the Browser tab); `browser.headless: false` also gives it its own window.
 
 An agent that uses a browser extension (such as Claude in Chrome) still reaches your Chrome through
 it: panal cannot stop that, it only gives the agent a better browser and tells it to use it.

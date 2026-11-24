@@ -277,11 +277,11 @@ func TestSessionsRestore(t *testing.T) {
 }
 
 func TestBrowserSettings(t *testing.T) {
-	if b := Defaults().Browser; !b.Enabled || b.Headless || b.Path != "" {
+	if b := Defaults().Browser; !b.Enabled || !b.Headless || b.Path != "" {
 		t.Fatalf("defaults = %+v", b)
 	}
-	s, err := Parse([]byte("browser:\n  enabled: false\n  headless: true\n  path: ' /opt/chrome '\n"))
-	if err != nil || s.Browser.Enabled || !s.Browser.Headless || s.Browser.Path != "/opt/chrome" {
+	s, err := Parse([]byte("browser:\n  enabled: false\n  headless: false\n  path: ' /opt/chrome '\n"))
+	if err != nil || s.Browser.Enabled || s.Browser.Headless || s.Browser.Path != "/opt/chrome" {
 		t.Fatalf("parse = %+v, %v", s.Browser, err)
 	}
 	path := filepath.Join(t.TempDir(), "settings.yaml")

@@ -730,7 +730,7 @@
     restore = r === 'always' || r === 'never' ? r : 'ask'
     messagesOn = s.messages?.enabled ?? true
     autoDeliver = s.messages?.autoDeliver ?? true
-    browserCfg = s.browser ?? { enabled: true, headless: false, path: '' }
+    browserCfg = s.browser ?? { enabled: true, headless: true, path: '' }
     mcpOn = s.mcp?.enabled ?? true
     historyCfg = s.history ?? { enabled: true, keep: 300 }
     setAppearance(s.ui?.appearance)

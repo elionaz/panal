@@ -76,7 +76,8 @@ type App struct {
 	frontendReady bool   // the frontend called TakePendingFocus
 	pendingFocus  string // session to select once the frontend is ready
 
-	grabs dropGrabs // dropped screenshot thumbnails (drops.go)
+	grabs dropGrabs   // dropped screenshot thumbnails (drops.go)
+	view  browserView // the Browser tab (browserview.go)
 }
 
 type attachment struct {
