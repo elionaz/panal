@@ -7,6 +7,14 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A shell no longer gets stuck on "question" from its own beeps.** A bell that comes right after
+  a key or an automatic terminal report (not Enter) is the program beeping at it, not asking for
+  you. The common case: after vim, focus reports stayed on, so each time you entered or left the
+  terminal zsh beeped at them and the session went back to "question". A bell after Enter, or on
+  its own later, still asks for attention.
+
 ## [0.15.1] - 2026-11-21
 
 ### Changed
