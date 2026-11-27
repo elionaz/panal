@@ -19,6 +19,30 @@ tells you when one of them needs you.
   <img src="docs/img/screenshot.png" alt="panal: three projects in the sidebar, each session with its model, branch, changes and live state (working, an approval waiting, done), a message waiting, a session's own browser open (globe) and a session continued from another (⇠ Changelog draft); the selected agent's terminal on the right" width="900">
 </p>
 
+## One task, start to finish
+
+panal follows a task from the first prompt to the merge, in one window:
+
+1. **Start it in its own worktree.** **+** on a project, pick the agent, *New worktree*: the agent
+   gets its own branch and folder, so agents working in parallel never touch each other's files. A
+   `.panal.yaml` copies `.env` and other untracked files into it and runs a setup
+   (`npm install`) before the agent starts.
+2. **Let the agent work.** The sidebar shows what it's doing ("Editing main.go") and tells you,
+   with a notification, when it asks for an approval, has a question or finishes its turn.
+3. **Review it in Changes.** The diff of everything the branch changed. Click a line number to
+   leave a note on that line and send all your notes to the agent in one message; it fixes them
+   in the same session.
+4. **Open the pull request.** From Changes: the branch is pushed and the pull request opened on
+   GitHub or GitLab, with a title and description suggested from the commits. Its checks, review
+   and comments show up in Changes: *Ask &lt;session&gt; to fix them* sends the failing checks back
+   to the agent, and *Send all to &lt;session&gt;* the review comments.
+5. **Merge and clean up.** Merge on the host from Changes (or into the local base). Once the pull
+   request is merged, here or on GitHub, panal offers to remove the worktree and its branch;
+   `panal worktree rm --merged` sweeps the leftovers.
+
+It's all plain git and your own `gh` / `glab` login. Details in
+[docs/worktrees.md](docs/worktrees.md).
+
 ## Features
 
 - **Works with any agent CLI**: not just a few. A built-in catalog (Claude Code, codex, opencode,

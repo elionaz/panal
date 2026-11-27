@@ -19,6 +19,30 @@ vivos aunque cierres la app y te avisa cuando alguno te necesita.
   <img src="docs/img/screenshot-es.png" alt="panal: tres proyectos en la barra lateral, cada sesión con su modelo, rama, cambios y estado en vivo (trabajando, una aprobación esperando, terminada), un mensaje esperando, el navegador propio de una sesión abierto (globo) y una sesión que continúa a otra (⇠ Changelog draft); a la derecha, la terminal del agente elegido" width="900">
 </p>
 
+## Una tarea, de principio a fin
+
+panal acompaña una tarea desde el primer prompt hasta el merge, en una sola ventana:
+
+1. **Empieza en su propio worktree.** **+** en un proyecto, eliges el agente y *Worktree nuevo*:
+   el agente tiene su propia rama y carpeta, así los agentes que trabajan en paralelo nunca tocan
+   los archivos de otro. Un `.panal.yaml` copia el `.env` y otros archivos sin versionar y corre una
+   preparación (`npm install`) antes de que arranque el agente.
+2. **El agente trabaja.** La barra lateral muestra qué está haciendo ("Editando main.go") y te
+   avisa, con una notificación, cuando pide una aprobación, tiene una pregunta o termina su turno.
+3. **Revisas en Cambios.** El diff de todo lo que cambió la rama. Haz clic en un número de línea
+   para dejar una nota en esa línea y mándale todas tus notas al agente en un solo mensaje; las
+   corrige en la misma sesión.
+4. **Abres el pull request.** Desde Cambios: se hace push de la rama y se abre el pull request en
+   GitHub o GitLab, con título y descripción sugeridos a partir de los commits. Sus checks,
+   revisión y comentarios aparecen en Cambios: *Pedirle a &lt;sesión&gt; que los arregle* le devuelve
+   al agente los checks que fallan, y *Enviar todos a &lt;sesión&gt;* los comentarios de la revisión.
+5. **Merge y limpieza.** Haz el merge en el host desde Cambios (o en la base local). Cuando el pull
+   request está mergeado, aquí o en GitHub, panal ofrece eliminar el worktree y su rama;
+   `panal worktree rm --merged` limpia lo que quede.
+
+Todo es git normal y tu propio login de `gh` / `glab`. Detalles en
+[docs/es/worktrees.md](docs/es/worktrees.md).
+
 ## Funciones
 
 - **Funciona con cualquier CLI de agente**, no solo con unos pocos. Un catálogo integrado (Claude
