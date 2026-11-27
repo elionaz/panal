@@ -160,6 +160,10 @@ type RemoveOptions struct {
 	DeleteBranch bool
 	// Base is the branch unmerged commits are counted against.
 	Base string
+	// Upstream is the base's remote-tracking branch, if any: commits whose
+	// changes it already has (a pull request squash- or rebase-merged on
+	// the host, and the local base not pulled since) are not lost either.
+	Upstream string
 }
 
 // LossError lists what removing a worktree would throw away.
@@ -234,6 +238,11 @@ func Losses(ctx context.Context, repo, path, branch string, o RemoveOptions) (*L
 			// rebase merge on the host) are not lost with the branch.
 			if len(cs) > 0 {
 				if mb, err := MergeBase(ctx, repo, o.Base, head); err == nil && AlreadyIn(ctx, repo, o.Base, mb, head) {
+					cs = nil
+				}
+			}
+			if len(cs) > 0 && o.Upstream != "" && o.Upstream != o.Base {
+				if mb, err := MergeBase(ctx, repo, o.Upstream, head); err == nil && AlreadyIn(ctx, repo, o.Upstream, mb, head) {
 					cs = nil
 				}
 			}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ForgeComment, ForgePR, ForgeStatus } from './api'
-import { canMerge, commentPlace, forgeView, hostName, mergeWarnings, prBody, prRef } from './forge'
+import { canMerge, commentPlace, forgeView, hostName, isMerged, mergeWarnings, prBody, prRef } from './forge'
 
 const pr = (over: Partial<ForgePR> = {}): ForgePR =>
   ({
@@ -38,6 +38,10 @@ describe('pull request helpers', () => {
     expect(canMerge(pr({ state: 'draft' }))).toBe(true)
     expect(canMerge(pr({ state: 'merged' }))).toBe(false)
     expect(canMerge(null)).toBe(false)
+    expect(isMerged(pr({ state: 'merged' }))).toBe(true)
+    expect(isMerged(pr())).toBe(false)
+    expect(isMerged(pr({ state: 'closed' }))).toBe(false)
+    expect(isMerged(null)).toBe(false)
   })
 
   it('warns before a merge the host may refuse', () => {

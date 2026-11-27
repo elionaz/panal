@@ -39,6 +39,11 @@ export function canMerge(pr: ForgePR | null | undefined): boolean {
   return !!pr && (pr.state === 'open' || pr.state === 'draft')
 }
 
+/** The pull request was merged, in the app or on the host. */
+export function isMerged(pr: ForgePR | null | undefined): boolean {
+  return pr?.state === 'merged'
+}
+
 /** Reasons the host may refuse or the user may want to wait. */
 export function mergeWarnings(pr: ForgePR): Array<'conflicts' | 'checks' | 'pending' | 'blocked' | 'draft'> {
   const w: Array<'conflicts' | 'checks' | 'pending' | 'blocked' | 'draft'> = []

@@ -193,7 +193,8 @@ con `vite --port $PANAL_PORT` (en tu script `dev`), o lee `process.env.VITE_PORT
   Si hay conflictos se hace `git merge --abort` y se informa qué archivos chocaron. Los cambios sin
   commitear del worktree no entran en el merge (se avisa cuántos quedaron fuera). En la app, tras un
   merge correcto se ofrece eliminar el worktree y su rama (la confirmación de siempre, con *Borrar
-  también la rama* ya marcada).
+  también la rama* ya marcada). Lo mismo cuando el pull request de la rama se mergea en el
+  servidor, desde la app o desde fuera (una vez por worktree y rama mientras la app está abierta).
 - **Crear pull request** (`panal worktree pr [--no-open] <id>`): `git push -u <remoto> <rama>` y
   luego abre la página del servidor para crear el pull request hacia la base. No usa `gh`, nunca
   hace push forzado ni sube la base.
@@ -220,7 +221,9 @@ con `vite --port $PANAL_PORT` (en tu script `dev`), o lee `process.env.VITE_PORT
   - tras borrar: `git worktree prune` y, si se pidió, `git branch -D` (seguro: los commits sin
     mergear ya se comprobaron contra la base, salvo con *force*);
   - los commits cuyos cambios ya tiene la base (un pull request mergeado en el host con squash o
-    rebase) no cuentan como sin mergear: borrar una rama mergeada no pide *force*.
+    rebase) no cuentan como sin mergear: borrar una rama mergeada no pide *force*. También cuenta
+    el upstream de la base (`origin/main`), así que da igual si la base local no se actualizó
+    después del merge.
 - **Eliminar mergeados** (`panal worktree rm --merged [--dry-run] <proyecto>`): elimina, con sus
   ramas, todos los worktrees huérfanos cuya rama ya está mergeada en su base (con merge, squash o
   rebase) y que no tienen nada sin commitear. Nunca fuerza: uno con cambios sin commitear, o con

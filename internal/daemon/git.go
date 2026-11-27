@@ -761,7 +761,7 @@ func (s *Server) worktreeRemove(p protocol.WorktreeRemoveParams) (protocol.Workt
 	}
 	ctx, cancel := context.WithTimeout(s.bg, gitActionTO)
 	defer cancel()
-	opts := gitx.RemoveOptions{Force: p.Force, DeleteBranch: p.DeleteBranch, Base: baseRef(ctx, rec.Repo, rec.Base, rec.BaseCommit, "refs/heads/"+rec.Branch)}
+	opts := removeOptions(ctx, rec, p.Force, p.DeleteBranch)
 	if p.DryRun {
 		loss, err := gitx.Losses(ctx, rec.Repo, rec.Path, rec.Branch, opts)
 		return protocol.WorktreeRemoveResult{Loss: loss}, err
@@ -775,6 +775,18 @@ func (s *Server) worktreeRemove(p protocol.WorktreeRemoveParams) (protocol.Workt
 	}
 	s.publishWorktrees(rec.ProjectID)
 	return protocol.WorktreeRemoveResult{Removed: true}, nil
+}
+
+// removeOptions are the options to remove rec's worktree: its branch's
+// commits are checked against the base and, like compareBase does, against
+// the base's upstream (a pull request merged on the host, not pulled yet).
+func removeOptions(ctx context.Context, rec worktree.Record, force, deleteBranch bool) gitx.RemoveOptions {
+	return gitx.RemoveOptions{
+		Force:        force,
+		DeleteBranch: deleteBranch,
+		Base:         baseRef(ctx, rec.Repo, rec.Base, rec.BaseCommit, "refs/heads/"+rec.Branch),
+		Upstream:     gitx.Upstream(ctx, rec.Repo, rec.Base),
+	}
 }
 
 // removeOne removes a worktree no running session uses (with its branch
@@ -823,7 +835,7 @@ func (s *Server) worktreeRemoveMerged(p protocol.WorktreeRemoveMergedParams) (pr
 		if err != nil {
 			continue
 		}
-		opts := gitx.RemoveOptions{DeleteBranch: true, Base: baseRef(ctx, rec.Repo, rec.Base, rec.BaseCommit, "refs/heads/"+rec.Branch)}
+		opts := removeOptions(ctx, rec, false, true)
 		if p.DryRun {
 			if loss, err := gitx.Losses(ctx, rec.Repo, rec.Path, rec.Branch, opts); err != nil || loss != nil {
 				out.Skipped = append(out.Skipped, protocol.WorktreeSkipped{Worktree: wi, Reason: skipReason(err, loss)})

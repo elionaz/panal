@@ -475,3 +475,44 @@ func TestWorktreeRemoveMerged(t *testing.T) {
 		t.Error("the dirty worktree lost its file")
 	}
 }
+
+// A pull request squash-merged on the host while the local main was not
+// pulled: the diff already shows the branch as merged (against the
+// upstream), and removing it with its branch needs no force either.
+func TestWorktreeRemoveSquashedOnHostOnly(t *testing.T) {
+	c, _, _ := startDaemon(t)
+	ctx := ctxT(t)
+	repo := tempRepo(t)
+	proj, err := c.ProjectAdd(ctx, repo, "host")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, dir := orphanWorktree(t, c, proj.ID)
+	commitFile(t, dir, "h.txt", "h\n", "h work")
+	branch := gitT(t, dir, "branch", "--show-current")
+	// origin/main gets the squash; the local main stays where it was.
+	tree := gitT(t, repo, "rev-parse", branch+"^{tree}")
+	squash := gitT(t, repo, "commit-tree", "-p", "main", "-m", "squashed h", tree)
+	gitT(t, repo, "update-ref", "refs/remotes/origin/main", squash)
+
+	var info protocol.WorktreeInfo
+	for _, w := range listWorktrees(t, c, proj.ID) {
+		if w.ID == id {
+			info = w
+		}
+	}
+	if info.Git == nil || !info.Git.Merged {
+		t.Fatalf("not shown as merged: %+v", info.Git)
+	}
+	dry, err := c.WorktreeRemove(ctx, protocol.WorktreeRemoveParams{ID: id, DeleteBranch: true, DryRun: true})
+	if err != nil || dry.Loss != nil {
+		t.Fatalf("dry run = %+v, %v", dry.Loss, err)
+	}
+	res, err := c.WorktreeRemoveMerged(ctx, protocol.WorktreeRemoveMergedParams{ProjectID: proj.ID})
+	if err != nil || len(res.Removed) != 1 || res.Removed[0].ID != id || len(res.Skipped) != 0 {
+		t.Fatalf("remove merged = %+v, %v", res, err)
+	}
+	if out := gitT(t, repo, "branch", "--list", branch); out != "" {
+		t.Errorf("branch %s not deleted", branch)
+	}
+}
