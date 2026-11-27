@@ -545,7 +545,15 @@ func (s *Server) spawn(p protocol.SpawnParams) (protocol.SessionInfo, error) {
 	return s.spawnWith(p, spawnExtra{})
 }
 
-func (s *Server) spawnWith(p protocol.SpawnParams, extra spawnExtra) (protocol.SessionInfo, error) {
+func (s *Server) spawnWith(p protocol.SpawnParams, extra spawnExtra) (_ protocol.SessionInfo, err error) {
+	// A failed spawn only reaches whoever asked for it (an error in the
+	// app); the log keeps it too, to look into later.
+	defer func() {
+		if err != nil {
+			s.log.Warn("session spawn failed", "project", p.ProjectID, "profile", p.ProfileID, "mode", p.Mode,
+				"worktree", p.WorktreeID, "branch", p.Branch, "err", err)
+		}
+	}()
 	proj, err := s.projects.Get(p.ProjectID)
 	if err != nil {
 		return protocol.SessionInfo{}, err

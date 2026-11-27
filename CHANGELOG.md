@@ -9,6 +9,9 @@ releases may include breaking changes.
 
 ### Fixed
 
+- A session that fails to start (a worktree in a folder without git, a missing agent…) is now in
+  the daemon log (`session spawn failed`, with the project, agent, mode and error), not only in the
+  error the app shows.
 - Changes offers to remove the worktree and its branch also when the branch's pull request was
   merged on GitHub or GitLab, not only when it was merged from the app.
 - Removing a worktree whose pull request was squash- or rebase-merged on the host no longer asks
