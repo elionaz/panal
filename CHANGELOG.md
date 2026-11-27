@@ -9,6 +9,9 @@ releases may include breaking changes.
 
 ### Fixed
 
+- The unified diff in Changes (≡) showed each line's code below its `+` / `−` sign and wrapped it at
+  half the width, in the middle of words: the code now follows the sign on the same row, uses the
+  whole width and wraps between words when it can.
 - A session that fails to start (a worktree in a folder without git, a missing agent…) is now in
   the daemon log (`session spawn failed`, with the project, agent, mode and error), not only in the
   error the app shows.

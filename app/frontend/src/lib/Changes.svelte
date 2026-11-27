@@ -1484,13 +1484,33 @@
   }
   /* Unified: long lines wrap instead of running off the edge (side by
    * side keeps scrolling: its two columns are separate tables, and wrapped
-   * rows would no longer line up). */
+   * rows would no longer line up). The sign and the code stay on one row,
+   * the code takes the rest of it (diff2html's width counts its 16em of
+   * padding twice under border-box, and its 100% wide code always went
+   * below the sign) and breaks between words when it can. */
   .diff.wrap :global(.d2h-code-line) {
-    white-space: normal;
+    display: flex;
+    width: 100%;
+    padding-right: 1em;
+  }
+  .diff.wrap :global(.d2h-code-line-prefix) {
+    flex: none;
+    margin-right: 1ch;
   }
   .diff.wrap :global(.d2h-code-line-ctn) {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
     white-space: pre-wrap;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+  /* The number cell (positioned by diff2html) covers the whole wrapped
+   * row. */
+  .diff.wrap :global(.d2h-diff-tbody tr) {
+    position: relative;
+  }
+  .diff.wrap :global(td.d2h-code-linenumber) {
+    height: 100%;
   }
   .diff :global(.raw) {
     margin: 0;
