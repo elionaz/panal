@@ -163,6 +163,15 @@ func ctxT(t *testing.T) context.Context {
 	return ctx
 }
 
+// ctxLong is ctxT for a test that runs many git commands under one context
+// (several worktrees made, listed and removed): on a slow CI runner with
+// -race, 10s for all of them is not enough.
+func ctxLong(t *testing.T) context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
 // readUntil collects output frames until pred holds on the accumulated bytes
 // or a terminal frame arrives.
 func readUntil(t *testing.T, st *client.Stream, pred func(out []byte, f protocol.Frame) bool) []byte {
