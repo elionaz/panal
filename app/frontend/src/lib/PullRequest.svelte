@@ -5,7 +5,7 @@
   // shows how to set it up, and on the base branch it shows nothing.
   import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
   import { api, errorMessage, type ForgeComment, type ForgeStatus } from './api'
-  import { canMerge, commentPlace, forgeView, hostName, mergeWarnings, prBody, prRef } from './forge'
+  import { canMerge, commentPlace, forgeView, hostName, isMerged, mergeWarnings, prBody, prRef } from './forge'
   import { hasKey, locale, t, type Params } from './i18n.svelte'
   import { checksMessage, commentsMessage } from './review'
 
@@ -23,6 +23,9 @@
     available?: boolean
     /** The branch has a pull request (Changes then hides its create button). */
     hasPR?: boolean
+    /** The head branch of the shown pull request when it is merged (here or
+     * on the host); '' otherwise. */
+    mergedHead?: string
     /** The create form is open (Changes shows its button as pressed). */
     creating?: boolean
     /** Another branch the session worked on ('' = the one it is on now):
@@ -44,6 +47,7 @@
     onMerged,
     available = $bindable(false),
     hasPR = $bindable(false),
+    mergedHead = $bindable(''),
     creating = $bindable(false),
     branch = '',
     sendTo = '',
@@ -74,6 +78,9 @@
   })
   $effect(() => {
     hasPR = !!pr
+  })
+  $effect(() => {
+    mergedHead = pr && isMerged(pr) ? pr.head : ''
   })
   /** Without a pull request there is nothing to show until the create form
    * opens (Changes has the button) or there is a notice. */

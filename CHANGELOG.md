@@ -7,6 +7,14 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Changes offers to remove the worktree and its branch also when the branch's pull request was
+  merged on GitHub or GitLab, not only when it was merged from the app.
+- Removing a worktree whose pull request was squash- or rebase-merged on the host no longer asks
+  to force it (or skips it in `panal worktree rm --merged`) when the local base branch hasn't been
+  pulled since: its commits are checked against the base's upstream too, as Changes already did.
+
 ## [0.16.0] - 2026-11-23
 
 ### Added

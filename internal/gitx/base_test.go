@@ -216,3 +216,40 @@ func TestLossesSquashMergedBranch(t *testing.T) {
 		t.Fatalf("dirty after merge: %+v, %v", le, err)
 	}
 }
+
+func TestLossesSquashMergedUpstreamOnly(t *testing.T) {
+	c := ctx(t)
+	repo := newRepo(t)
+	host := hostRepo(t, repo)
+	wt := filepath.Join(canon(t.TempDir()), "w")
+	if err := AddWorktree(c, repo, wt, "agent/up", "main"); err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, "up.txt", "up\n")
+	sh(t, wt, "add", "-A")
+	sh(t, wt, "commit", "-q", "-m", "work")
+	// Squash-merged on the host and fetched, the local main not pulled.
+	hostCommit(t, host, "up.txt", "up\n", "squashed")
+	if err := Fetch(c, repo, "origin", "main"); err != nil {
+		t.Fatal(err)
+	}
+	stale := RemoveOptions{Base: "main", DeleteBranch: true}
+	if le, err := Losses(c, repo, wt, "agent/up", stale); err != nil || le == nil || len(le.Unmerged) != 1 {
+		t.Fatalf("against the local main only: %+v, %v", le, err)
+	}
+	withUp := stale
+	withUp.Upstream = Upstream(c, repo, "main")
+	if withUp.Upstream == "" {
+		t.Fatal("no upstream for main")
+	}
+	if le, err := Losses(c, repo, wt, "agent/up", withUp); err != nil || le != nil {
+		t.Fatalf("with the upstream: %+v, %v", le, err)
+	}
+	// A commit after the merge is still lost.
+	write(t, wt, "late.txt", "late\n")
+	sh(t, wt, "add", "-A")
+	sh(t, wt, "commit", "-q", "-m", "late")
+	if le, err := Losses(c, repo, wt, "agent/up", withUp); err != nil || le == nil || len(le.Unmerged) != 2 {
+		t.Fatalf("with a later commit: %+v, %v", le, err)
+	}
+}

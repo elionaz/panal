@@ -190,7 +190,9 @@ set, so nothing changes for servers that expect their usual port.
   On conflicts it runs `git merge --abort` and reports which files clashed. Uncommitted changes in
   the worktree aren't part of the merge (you're told how many were left out). In the app, a
   successful merge then offers to remove the worktree and its branch (the usual remove
-  confirmation, with *delete the branch* already ticked).
+  confirmation, with *delete the branch* already ticked). So does a pull request of the branch
+  merged on the host, from the app or elsewhere (once per worktree and branch while the app
+  runs).
 - **Create pull request** (`panal worktree pr [--no-open] <id>`): `git push -u <remote> <branch>`
   and then opens the host's page to create the pull request into the base. It doesn't use `gh` and
   never force-pushes or pushes the base.
@@ -217,7 +219,8 @@ set, so nothing changes for servers that expect their usual port.
   - after removing: `git worktree prune` and, if requested, `git branch -D` (safe: unmerged commits
     were already checked against the base, unless *force* is used);
   - commits whose changes the base already has (a pull request squash- or rebase-merged on the
-    host) don't count as unmerged: deleting a merged branch needs no *force*.
+    host) don't count as unmerged: deleting a merged branch needs no *force*. The base's upstream
+    (`origin/main`) counts too, so a local base not pulled since the merge doesn't matter.
 - **Remove merged** (`panal worktree rm --merged [--dry-run] <project>`): removes, with their
   branches, every orphaned worktree whose branch is already merged into its base (by a merge, a
   squash or a rebase) and that has nothing uncommitted. It never forces: a worktree with

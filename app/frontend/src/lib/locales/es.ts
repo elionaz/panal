@@ -448,6 +448,7 @@ export const es: Dict = {
     other: ' · ojo: {n} cambios sin commitear no se subieron',
   },
   'changes.removeOffer': '¿Eliminar el worktree y su rama?',
+  'changes.prMergedOnHost': 'El pull request de esta rama ya está mergeado.',
   'changes.removeOfferYes': 'Eliminar…',
   'changes.removeOfferNo': 'Conservar',
   'changes.cancel': 'Cancelar',

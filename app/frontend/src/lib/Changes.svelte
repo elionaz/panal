@@ -65,6 +65,7 @@
   let commitsOpen = $state(true)
   let prBlock = $state<ReturnType<typeof PullRequest> | null>(null)
   let hasPR = $state(false)
+  let prMergedHead = $state('')
   let prCreating = $state(false)
   // The pull requests of every branch the session worked on (forge.list).
   let prList = $state<ForgeListItem[] | null>(null)
@@ -111,6 +112,9 @@
   /** The merge result, shown in the remove offer (not as a timed notice, whose
    * disappearing would move the offer's buttons under the pointer). */
   let mergedMsg = $state('')
+  /** The worktree and branch the remove offer was shown for (once each,
+   * whether the merge happened here or on the host). */
+  let offeredFor = ''
   // Pull request confirmation: remote and URL from a dry run.
   let prOpen = $state(false)
   let prInfo = $state<PRResult | null>(null)
@@ -128,6 +132,19 @@
 
   const wtId = $derived(diff?.worktreeId || worktreeId || '')
   const isWorktree = $derived(diff?.mode === 'worktree' || !!worktreeId)
+  // A pull request merged on the host (not from here): the same offer to
+  // remove the worktree as after merging it in the app.
+  $effect(() => {
+    // The head is compared: right after switching branches the block still
+    // shows the previous one's pull request.
+    if (!isWorktree || prBranch || !wtId || !diff?.branch || prMergedHead !== diff.branch) return
+    const key = `${wtId}|${diff.branch}`
+    if (key === offeredFor) return
+    offeredFor = key
+    mergedMsg = t('changes.prMergedOnHost')
+    merging = prOpen = removing = false
+    removeOffer = true
+  })
   const selected = $derived(diff?.files.find((f) => f.path === selectedPath) ?? diff?.files[0] ?? null)
   const rendered = $derived.by(() => {
     if (!selected?.patch) return ''
@@ -628,6 +645,7 @@
       }}
       onMerged={isWorktree
         ? (msg) => {
+            if (wtId && diff?.branch) offeredFor = `${wtId}|${diff.branch}`
             mergedMsg = msg
             merging = prOpen = removing = false
             removeOffer = true
@@ -637,6 +655,7 @@
       onSend={sendToSession}
       bind:available={forgeAvailable}
       bind:hasPR
+      bind:mergedHead={prMergedHead}
       bind:creating={prCreating}
       bind:this={prBlock}
     />
@@ -664,7 +683,9 @@
       {#if mergedMsg}<p class="ok">{mergedMsg}</p>{/if}
       <p>{t('changes.removeOffer')}</p>
       <div class="row">
-        <button class="btn danger" disabled={busy || live} onclick={offerRemove}>{t('changes.removeOfferYes')}</button>
+        <button class="btn danger" disabled={busy || live} title={live ? t('changes.stopFirst') : ''} onclick={offerRemove}
+          >{t('changes.removeOfferYes')}</button
+        >
         <button class="btn" onclick={() => (removeOffer = false)}>{t('changes.removeOfferNo')}</button>
       </div>
     </div>

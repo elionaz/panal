@@ -473,6 +473,7 @@ export const en = {
     other: ' · note: {n} uncommitted changes were not pushed',
   },
   'changes.removeOffer': 'Remove the worktree and its branch?',
+  'changes.prMergedOnHost': 'This branch’s pull request is merged.',
   'changes.removeOfferYes': 'Remove…',
   'changes.removeOfferNo': 'Keep',
   'changes.cancel': 'Cancel',
