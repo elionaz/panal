@@ -40,6 +40,13 @@ panal acompaña una tarea desde el primer prompt hasta el merge, en una sola ven
    request está mergeado, aquí o en GitHub, panal ofrece eliminar el worktree y su rama;
    `panal worktree rm --merged` limpia lo que quede.
 
+| | |
+|---|---|
+| <img src="docs/img/flow-worktree-es.png" alt="El menú + de un proyecto: Claude Code en un worktree nuevo, con su rama (agent/rate-limit) y su base (main)" width="420"> | <img src="docs/img/flow-notes-es.png" alt="Cambios de una sesión en worktree: dos notas en líneas del diff, listas para enviar al agente de la sesión" width="420"> |
+| **1.** Un agente nuevo en su propio worktree | **3.** Notas en el diff, enviadas al agente |
+| <img src="docs/img/flow-pr-es.png" alt="El pull request en Cambios: un check que falla, cambios pedidos, Pedirle a Login form que los arregle y los comentarios de la revisión con Enviar a Login form" width="420"> | <img src="docs/img/flow-merged-es.png" alt="Un pull request mergeado en GitHub: Cambios lo dice y ofrece eliminar el worktree y su rama" width="420"> |
+| **4.** El pull request: checks y comentarios de vuelta al agente | **5.** Mergeado en GitHub: eliminar el worktree |
+
 Todo es git normal y tu propio login de `gh` / `glab`. Detalles en
 [docs/es/worktrees.md](docs/es/worktrees.md).
 
