@@ -398,7 +398,7 @@ func commitFile(t *testing.T, dir, name, content, msg string) {
 
 func TestWorktreeRemoveMerged(t *testing.T) {
 	c, _, _ := startDaemon(t)
-	ctx := ctxT(t)
+	ctx := ctxLong(t)
 	repo := tempRepo(t)
 	proj, err := c.ProjectAdd(ctx, repo, "merged")
 	if err != nil {
@@ -481,7 +481,7 @@ func TestWorktreeRemoveMerged(t *testing.T) {
 // upstream), and removing it with its branch needs no force either.
 func TestWorktreeRemoveSquashedOnHostOnly(t *testing.T) {
 	c, _, _ := startDaemon(t)
-	ctx := ctxT(t)
+	ctx := ctxLong(t)
 	repo := tempRepo(t)
 	proj, err := c.ProjectAdd(ctx, repo, "host")
 	if err != nil {
